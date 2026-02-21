@@ -14,6 +14,47 @@ export type Database = {
   }
   public: {
     Tables: {
+      agent_reviews: {
+        Row: {
+          agent_id: string
+          assignment_id: string
+          comment: string | null
+          created_at: string
+          id: string
+          on_time: boolean
+          rating: number
+          student_id: string
+        }
+        Insert: {
+          agent_id: string
+          assignment_id: string
+          comment?: string | null
+          created_at?: string
+          id?: string
+          on_time?: boolean
+          rating: number
+          student_id: string
+        }
+        Update: {
+          agent_id?: string
+          assignment_id?: string
+          comment?: string | null
+          created_at?: string
+          id?: string
+          on_time?: boolean
+          rating?: number
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_reviews_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: true
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assignments: {
         Row: {
           agent_id: string | null
@@ -23,10 +64,15 @@ export type Database = {
           deliverable_url: string | null
           description: string | null
           file_url: string | null
+          human_verified: boolean | null
           id: string
+          priority_fee: number | null
+          reviewed_at: string | null
+          sla_tier: string
           status: string
           student_id: string
           subject: string | null
+          submitted_at: string | null
           title: string
           updated_at: string
         }
@@ -38,10 +84,15 @@ export type Database = {
           deliverable_url?: string | null
           description?: string | null
           file_url?: string | null
+          human_verified?: boolean | null
           id?: string
+          priority_fee?: number | null
+          reviewed_at?: string | null
+          sla_tier?: string
           status?: string
           student_id: string
           subject?: string | null
+          submitted_at?: string | null
           title: string
           updated_at?: string
         }
@@ -53,12 +104,109 @@ export type Database = {
           deliverable_url?: string | null
           description?: string | null
           file_url?: string | null
+          human_verified?: boolean | null
           id?: string
+          priority_fee?: number | null
+          reviewed_at?: string | null
+          sla_tier?: string
           status?: string
           student_id?: string
           subject?: string | null
+          submitted_at?: string | null
           title?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      audit_logs: {
+        Row: {
+          action: string
+          created_at: string
+          entity_id: string | null
+          entity_type: string
+          id: string
+          metadata: Json | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          metadata?: Json | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          metadata?: Json | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      messages: {
+        Row: {
+          assignment_id: string
+          content: string
+          created_at: string
+          id: string
+          sender_id: string
+        }
+        Insert: {
+          assignment_id: string
+          content: string
+          created_at?: string
+          id?: string
+          sender_id: string
+        }
+        Update: {
+          assignment_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          link: string | null
+          message: string
+          read: boolean
+          title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          link?: string | null
+          message: string
+          read?: boolean
+          title: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          link?: string | null
+          message?: string
+          read?: boolean
+          title?: string
+          user_id?: string
         }
         Relationships: []
       }
