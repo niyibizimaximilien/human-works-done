@@ -1,18 +1,16 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
 import {
-  Briefcase, Clock, CheckCircle, DollarSign, LogOut,
+  Briefcase, Clock, CheckCircle, DollarSign,
   FileText, AlertCircle, TrendingUp, Zap
 } from "lucide-react";
 
 const AgentDashboard = () => {
-  const { user, profile, signOut } = useAuth();
-  const navigate = useNavigate();
+  const { user } = useAuth();
   const [availableTasks, setAvailableTasks] = useState<any[]>([]);
   const [myTasks, setMyTasks] = useState<any[]>([]);
   const [tab, setTab] = useState<"available" | "my">("available");
@@ -72,22 +70,7 @@ const AgentDashboard = () => {
   const tasks = tab === "available" ? availableTasks : myTasks;
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-card/50 backdrop-blur-xl sticky top-0 z-40">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <h1 className="text-lg font-bold">
-            MR<span className="text-primary">.</span>ASSIGNMENT
-          </h1>
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-muted-foreground hidden sm:block">{profile?.full_name || user?.email}</span>
-            <Button variant="ghost" size="sm" onClick={() => { signOut(); navigate("/"); }}>
-              <LogOut className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      <main className="container mx-auto px-4 py-8 max-w-5xl">
+    <div className="max-w-5xl mx-auto space-y-6">
         <div className="mb-8">
           <h2 className="text-2xl font-bold">Agent Dashboard</h2>
           <p className="text-muted-foreground text-sm">Find tasks, meet deadlines, and grow your earnings.</p>
@@ -170,7 +153,6 @@ const AgentDashboard = () => {
             ))
           )}
         </div>
-      </main>
     </div>
   );
 };

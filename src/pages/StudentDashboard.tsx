@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -8,13 +7,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import {
-  Upload, Clock, CheckCircle, FileText, Plus, LogOut,
+  Upload, Clock, CheckCircle, FileText, Plus,
   BookOpen, DollarSign, AlertCircle, X
 } from "lucide-react";
 
 const StudentDashboard = () => {
-  const { user, profile, signOut } = useAuth();
-  const navigate = useNavigate();
+  const { user, profile } = useAuth();
   const [assignments, setAssignments] = useState<any[]>([]);
   const [showNew, setShowNew] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -74,25 +72,7 @@ const StudentDashboard = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border bg-card/50 backdrop-blur-xl sticky top-0 z-40">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <h1 className="text-lg font-bold">
-            MR<span className="text-primary">.</span>ASSIGNMENT
-          </h1>
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-muted-foreground hidden sm:block">
-              {profile?.full_name || user?.email}
-            </span>
-            <Button variant="ghost" size="sm" onClick={() => { signOut(); navigate("/"); }}>
-              <LogOut className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      <main className="container mx-auto px-4 py-8 max-w-5xl">
+    <div className="max-w-5xl mx-auto space-y-6">
         <div className="flex items-center justify-between mb-8">
           <div>
             <h2 className="text-2xl font-bold">Student Dashboard</h2>
@@ -204,7 +184,6 @@ const StudentDashboard = () => {
             ))
           )}
         </div>
-      </main>
     </div>
   );
 };
