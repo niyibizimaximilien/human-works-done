@@ -14,16 +14,129 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      assignments: {
+        Row: {
+          agent_id: string | null
+          budget: number | null
+          created_at: string
+          deadline: string
+          deliverable_url: string | null
+          description: string | null
+          file_url: string | null
+          id: string
+          status: string
+          student_id: string
+          subject: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          agent_id?: string | null
+          budget?: number | null
+          created_at?: string
+          deadline: string
+          deliverable_url?: string | null
+          description?: string | null
+          file_url?: string | null
+          id?: string
+          status?: string
+          student_id: string
+          subject?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          agent_id?: string | null
+          budget?: number | null
+          created_at?: string
+          deadline?: string
+          deliverable_url?: string | null
+          description?: string | null
+          file_url?: string | null
+          id?: string
+          status?: string
+          student_id?: string
+          subject?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          department: string | null
+          full_name: string | null
+          id: string
+          level: string | null
+          onboarding_completed: boolean
+          phone: string | null
+          university: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          department?: string | null
+          full_name?: string | null
+          id?: string
+          level?: string | null
+          onboarding_completed?: boolean
+          phone?: string | null
+          university?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          department?: string | null
+          full_name?: string | null
+          id?: string
+          level?: string | null
+          onboarding_completed?: boolean
+          phone?: string | null
+          university?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "student" | "agent" | "admin" | "logistics"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +263,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["student", "agent", "admin", "logistics"],
+    },
   },
 } as const
