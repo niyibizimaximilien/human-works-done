@@ -36,11 +36,15 @@ const Navbar = () => {
           </div>
 
           <div className="flex items-center gap-3">
-            <Button variant="outline" size="sm">
-              <LogIn className="mr-1.5 h-4 w-4" />
-              Log In
-            </Button>
-            <Button size="sm">Get Started</Button>
+            <Link to="/auth">
+              <Button variant="outline" size="sm">
+                <LogIn className="mr-1.5 h-4 w-4" />
+                Log In
+              </Button>
+            </Link>
+            <Link to="/auth">
+              <Button size="sm">Get Started</Button>
+            </Link>
           </div>
         </div>
       </nav>
