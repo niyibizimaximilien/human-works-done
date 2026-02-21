@@ -32,9 +32,12 @@ const App = () => (
               <Route path="tasks" element={<DashboardHome />} />
               <Route path="my-tasks" element={<DashboardHome />} />
               <Route path="earnings" element={<DashboardHome />} />
+              <Route path="reputation" element={<DashboardHome />} />
+              <Route path="messages" element={<DashboardHome />} />
               <Route path="users" element={<DashboardHome />} />
               <Route path="all-assignments" element={<DashboardHome />} />
               <Route path="roles" element={<DashboardHome />} />
+              <Route path="audit" element={<DashboardHome />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
