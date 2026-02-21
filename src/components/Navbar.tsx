@@ -1,13 +1,11 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Home, Lightbulb, ShoppingBag, DollarSign, LogIn, Sparkles } from "lucide-react";
+import { Home, Users, Briefcase, LogIn } from "lucide-react";
 
 const navItems = [
   { href: "#", icon: Home, label: "Home" },
-  { href: "#how-it-works", icon: Lightbulb, label: "How" },
-  { href: "#features", icon: Sparkles, label: "Features" },
-  { href: "#store", icon: ShoppingBag, label: "Store" },
-  { href: "#earn", icon: DollarSign, label: "Earn" },
+  { href: "#students", icon: Users, label: "Students" },
+  { href: "#agents", icon: Briefcase, label: "Agents" },
 ];
 
 const Navbar = () => {
@@ -21,19 +19,6 @@ const Navbar = () => {
               MR<span className="text-primary">.</span>ASSIGNMENT
             </span>
           </Link>
-
-          <div className="flex items-center gap-8">
-            {navItems.slice(1).map((item) => (
-              <a
-                key={item.label}
-                href={item.href}
-                className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors text-sm font-medium"
-              >
-                <item.icon className="h-4 w-4" />
-                {item.label}
-              </a>
-            ))}
-          </div>
 
           <div className="flex items-center gap-3">
             <Link to="/auth">
@@ -62,13 +47,13 @@ const Navbar = () => {
               <span className="text-[10px] font-medium">{item.label}</span>
             </a>
           ))}
-          <a
-            href="#"
+          <Link
+            to="/auth"
             className="flex flex-col items-center justify-center gap-0.5 flex-1 py-1 text-muted-foreground hover:text-primary transition-colors"
           >
             <LogIn className="h-5 w-5" />
             <span className="text-[10px] font-medium">Log In</span>
-          </a>
+          </Link>
         </div>
       </nav>
     </>
