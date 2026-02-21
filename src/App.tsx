@@ -10,6 +10,9 @@ import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
 import DashboardHome from "./pages/DashboardHome";
 import SettingsPage from "./pages/SettingsPage";
+import MessagesPage from "./pages/MessagesPage";
+import ReputationPage from "./pages/ReputationPage";
+import EarningsPage from "./pages/EarningsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,9 +34,9 @@ const App = () => (
               <Route path="assignments" element={<DashboardHome />} />
               <Route path="tasks" element={<DashboardHome />} />
               <Route path="my-tasks" element={<DashboardHome />} />
-              <Route path="earnings" element={<DashboardHome />} />
-              <Route path="reputation" element={<DashboardHome />} />
-              <Route path="messages" element={<DashboardHome />} />
+              <Route path="earnings" element={<EarningsPage />} />
+              <Route path="reputation" element={<ReputationPage />} />
+              <Route path="messages" element={<MessagesPage />} />
               <Route path="users" element={<DashboardHome />} />
               <Route path="all-assignments" element={<DashboardHome />} />
               <Route path="roles" element={<DashboardHome />} />
