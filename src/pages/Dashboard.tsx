@@ -1,10 +1,10 @@
 import { useAuth } from "@/hooks/useAuth";
-import { Navigate } from "react-router-dom";
-import StudentDashboard from "./StudentDashboard";
-import AgentDashboard from "./AgentDashboard";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
+import DashboardLayout from "@/components/DashboardLayout";
 
 const Dashboard = () => {
   const { user, loading, role, profile } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -17,8 +17,11 @@ const Dashboard = () => {
   if (!user) return <Navigate to="/auth" replace />;
   if (profile && !profile.onboarding_completed) return <Navigate to="/onboarding" replace />;
 
-  if (role === "agent") return <AgentDashboard />;
-  return <StudentDashboard />;
+  return (
+    <DashboardLayout>
+      <Outlet />
+    </DashboardLayout>
+  );
 };
 
 export default Dashboard;

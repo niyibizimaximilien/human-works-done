@@ -8,6 +8,8 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
+import DashboardHome from "./pages/DashboardHome";
+import SettingsPage from "./pages/SettingsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -23,8 +25,17 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/onboarding" element={<Onboarding />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="/dashboard" element={<Dashboard />}>
+              <Route index element={<DashboardHome />} />
+              <Route path="settings" element={<SettingsPage />} />
+              <Route path="assignments" element={<DashboardHome />} />
+              <Route path="tasks" element={<DashboardHome />} />
+              <Route path="my-tasks" element={<DashboardHome />} />
+              <Route path="earnings" element={<DashboardHome />} />
+              <Route path="users" element={<DashboardHome />} />
+              <Route path="all-assignments" element={<DashboardHome />} />
+              <Route path="roles" element={<DashboardHome />} />
+            </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
