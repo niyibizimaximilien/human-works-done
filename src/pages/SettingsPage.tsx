@@ -5,14 +5,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "@/hooks/use-toast";
-import { Save, User, Shield, Bell } from "lucide-react";
+import { Save, User, Shield, Camera, Loader2 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 
 const SettingsPage = () => {
   const { user, profile, role, refreshProfile } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [form, setForm] = useState({
     full_name: profile?.full_name || "",
     phone: profile?.phone || "",
@@ -21,14 +23,32 @@ const SettingsPage = () => {
     level: profile?.level || "",
   });
 
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      toast({ title: "File too large", description: "Max 2MB for profile photos.", variant: "destructive" });
+      return;
+    }
+    setUploading(true);
+    const path = `avatars/${user!.id}/${Date.now()}-${file.name}`;
+    const { error } = await supabase.storage.from("assignment-files").upload(path, file, { upsert: true });
+    if (error) {
+      toast({ title: "Upload failed", description: error.message, variant: "destructive" });
+    } else {
+      const { data: { publicUrl } } = supabase.storage.from("assignment-files").getPublicUrl(path);
+      await supabase.from("profiles").update({ avatar_url: publicUrl }).eq("user_id", user!.id);
+      await refreshProfile();
+      toast({ title: "Photo updated!" });
+    }
+    setUploading(false);
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const { error } = await supabase
-        .from("profiles")
-        .update(form)
-        .eq("user_id", user!.id);
+      const { error } = await supabase.from("profiles").update(form).eq("user_id", user!.id);
       if (error) throw error;
       await refreshProfile();
       toast({ title: "Settings saved", description: "Your profile has been updated." });
@@ -39,17 +59,41 @@ const SettingsPage = () => {
     }
   };
 
+  const initials = (profile?.full_name || user?.email || "U")
+    .split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase();
+
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-2xl mx-auto space-y-6 page-enter">
       <div>
-        <h2 className="text-2xl font-bold">Settings</h2>
+        <h2 className="text-2xl font-heading font-bold">Settings</h2>
         <p className="text-muted-foreground text-sm">Manage your profile and preferences.</p>
       </div>
+
+      {/* Avatar */}
+      <Card className="border-border" style={{ boxShadow: "var(--card-shadow)" }}>
+        <CardContent className="p-6 flex items-center gap-5">
+          <div className="relative">
+            <Avatar className="h-20 w-20 border-2 border-border">
+              <AvatarImage src={profile?.avatar_url || undefined} />
+              <AvatarFallback className="bg-primary/10 text-primary text-xl font-heading">{initials}</AvatarFallback>
+            </Avatar>
+            <label className="absolute -bottom-1 -right-1 h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center cursor-pointer hover:scale-110 transition-transform">
+              <input type="file" className="hidden" accept="image/*" onChange={handleAvatarUpload} disabled={uploading} />
+              {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+            </label>
+          </div>
+          <div>
+            <h3 className="font-heading font-semibold">{profile?.full_name || "Set your name"}</h3>
+            <p className="text-sm text-muted-foreground">{user?.email}</p>
+            <p className="text-xs text-muted-foreground mt-1 capitalize">Role: {role || "student"}</p>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Profile */}
       <Card className="border-border" style={{ boxShadow: "var(--card-shadow)" }}>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
+          <CardTitle className="flex items-center gap-2 text-lg font-heading">
             <User className="h-5 w-5 text-primary" /> Profile Information
           </CardTitle>
           <CardDescription>Update your personal details.</CardDescription>
@@ -58,27 +102,27 @@ const SettingsPage = () => {
           <form onSubmit={handleSave} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label>Full Name</Label>
-                <Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} maxLength={100} />
+                <Label className="text-xs">Full Name</Label>
+                <Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} maxLength={100} className="mt-1" />
               </div>
               <div>
-                <Label>Phone</Label>
-                <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} maxLength={20} />
+                <Label className="text-xs">Phone</Label>
+                <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} maxLength={20} className="mt-1" />
               </div>
               <div>
-                <Label>University</Label>
-                <Input value={form.university} onChange={(e) => setForm({ ...form, university: e.target.value })} maxLength={200} />
+                <Label className="text-xs">University</Label>
+                <Input value={form.university} onChange={(e) => setForm({ ...form, university: e.target.value })} maxLength={200} className="mt-1" />
               </div>
               <div>
-                <Label>Department</Label>
-                <Input value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })} maxLength={200} />
+                <Label className="text-xs">Department</Label>
+                <Input value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })} maxLength={200} className="mt-1" />
               </div>
               <div>
-                <Label>Level</Label>
-                <Input value={form.level} onChange={(e) => setForm({ ...form, level: e.target.value })} maxLength={50} />
+                <Label className="text-xs">Level</Label>
+                <Input value={form.level} onChange={(e) => setForm({ ...form, level: e.target.value })} maxLength={50} className="mt-1" />
               </div>
             </div>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading} className="gold-glow">
               <Save className="mr-2 h-4 w-4" /> {loading ? "Saving..." : "Save Changes"}
             </Button>
           </form>
@@ -88,7 +132,7 @@ const SettingsPage = () => {
       {/* Account Info */}
       <Card className="border-border" style={{ boxShadow: "var(--card-shadow)" }}>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
+          <CardTitle className="flex items-center gap-2 text-lg font-heading">
             <Shield className="h-5 w-5 text-primary" /> Account
           </CardTitle>
         </CardHeader>

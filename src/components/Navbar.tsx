@@ -15,7 +15,7 @@ const Navbar = () => {
       <nav className="fixed top-0 left-0 right-0 z-50 h-16 bg-background/80 backdrop-blur-xl border-b border-border hidden md:block">
         <div className="container mx-auto h-full flex items-center justify-between px-4">
           <Link to="/" className="flex items-center gap-2">
-            <span className="text-xl font-bold text-foreground">
+            <span className="text-xl font-heading font-bold text-foreground">
               MR<span className="text-primary">.</span>ASSIGNMENT
             </span>
           </Link>
@@ -28,7 +28,7 @@ const Navbar = () => {
               </Button>
             </Link>
             <Link to="/auth">
-              <Button size="sm">Get Started</Button>
+              <Button size="sm" className="gold-glow">Get Started</Button>
             </Link>
           </div>
         </div>

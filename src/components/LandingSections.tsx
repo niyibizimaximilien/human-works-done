@@ -4,36 +4,36 @@ import { Card, CardContent } from "@/components/ui/card";
 import {
   Upload, CheckCircle, Shield, Clock, Lock, Users,
   ArrowRight, BadgeCheck, FileText, Briefcase,
-  DollarSign, MessageCircle, Star
+  MessageCircle, Star, Sparkles
 } from "lucide-react";
-import heroBg from "@/assets/hero-bg.jpg";
 
 const HeroSection = () => (
-  <section className="relative min-h-[80vh] flex items-center justify-center overflow-hidden pt-16">
-    <div
-      className="absolute inset-0 bg-cover bg-center opacity-20"
-      style={{ backgroundImage: `url(${heroBg})` }}
-    />
-    <div className="absolute inset-0 bg-gradient-to-b from-background/40 via-background/80 to-background" />
+  <section className="relative min-h-[85vh] flex items-center justify-center overflow-hidden pt-16">
+    <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-background to-background" />
+    <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-primary/8 rounded-full blur-[150px]" />
     <div className="relative z-10 container mx-auto px-4 text-center max-w-3xl">
-      <h1 className="text-4xl md:text-6xl font-extrabold leading-tight tracking-tight mb-6">
+      <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-medium mb-8 animate-fade-in">
+        <Sparkles className="h-3.5 w-3.5" />
+        Trusted by students across Rwanda
+      </div>
+      <h1 className="text-4xl md:text-6xl font-heading font-extrabold leading-tight tracking-tight mb-6 animate-slide-up">
         Get your assignments done by{" "}
-        <span className="text-gradient-neon">verified agents</span>
+        <span className="text-gradient-gold">verified agents</span>
       </h1>
-      <p className="text-lg text-muted-foreground max-w-xl mx-auto mb-10 leading-relaxed">
-        Post your assignment. A vetted agent from your campus picks it up, completes it, and delivers before deadline. Payment is held in escrow until you approve.
+      <p className="text-lg text-muted-foreground max-w-xl mx-auto mb-10 leading-relaxed animate-fade-in" style={{ animationDelay: "200ms" }}>
+        Post your assignment. A vetted agent picks it up, completes it, and delivers before deadline. Payment held in escrow until you approve.
       </p>
-      <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+      <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-in" style={{ animationDelay: "400ms" }}>
         <Link to="/auth">
-          <Button variant="hero" size="lg">
+          <Button size="lg" className="gold-glow h-12 px-8 font-semibold text-base">
             <Upload className="mr-2 h-5 w-5" />
             Submit an Assignment
           </Button>
         </Link>
         <Link to="/auth">
-          <Button variant="outline" size="lg">
+          <Button variant="outline" size="lg" className="h-12 px-8">
             <BadgeCheck className="mr-2 h-5 w-5" />
-            Join as Agent
+            Get Started Free
           </Button>
         </Link>
       </div>
@@ -53,7 +53,7 @@ const WhatYouGetSection = () => {
 
   const forAgents = [
     { icon: Briefcase, title: "Pick Tasks", desc: "Browse open assignments. Accept the ones that match your skills." },
-    { icon: DollarSign, title: "Earn Per Task", desc: "Get paid for every completed assignment. Withdraw anytime." },
+    { icon: Sparkles, title: "Earn Per Task", desc: "Get paid in RWF for every completed assignment. Withdraw anytime." },
     { icon: BadgeCheck, title: "Build Reputation", desc: "High ratings unlock priority access to higher-paying tasks." },
     { icon: FileText, title: "Deliver Work", desc: "Upload your deliverable. Student reviews and approves payment." },
   ];
@@ -61,21 +61,20 @@ const WhatYouGetSection = () => {
   return (
     <section className="py-20">
       <div className="container mx-auto px-4 max-w-5xl">
-        {/* For Students */}
         <div className="mb-20">
           <div className="flex items-center gap-3 mb-2">
             <Users className="h-5 w-5 text-primary" />
-            <h2 className="text-2xl md:text-3xl font-bold">For Students</h2>
+            <h2 className="text-2xl md:text-3xl font-heading font-bold">For Students</h2>
           </div>
           <p className="text-muted-foreground mb-8 max-w-lg">Post your assignment and let someone qualified handle it.</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {forStudents.map((f, i) => (
-              <Card key={i} className="border-border bg-card" style={{ boxShadow: "var(--card-shadow)" }}>
+              <Card key={i} className="border-border bg-card card-hover" style={{ boxShadow: "var(--card-shadow)" }}>
                 <CardContent className="p-5">
                   <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mb-3">
                     <f.icon className="h-5 w-5 text-primary" />
                   </div>
-                  <h3 className="font-semibold mb-1">{f.title}</h3>
+                  <h3 className="font-heading font-semibold mb-1">{f.title}</h3>
                   <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
                 </CardContent>
               </Card>
@@ -83,21 +82,20 @@ const WhatYouGetSection = () => {
           </div>
         </div>
 
-        {/* For Agents */}
         <div>
           <div className="flex items-center gap-3 mb-2">
             <Briefcase className="h-5 w-5 text-primary" />
-            <h2 className="text-2xl md:text-3xl font-bold">For Agents</h2>
+            <h2 className="text-2xl md:text-3xl font-heading font-bold">For Agents</h2>
           </div>
-          <p className="text-muted-foreground mb-8 max-w-lg">Earn money by completing assignments for students on your campus.</p>
+          <p className="text-muted-foreground mb-8 max-w-lg">Earn money by completing assignments for students.</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {forAgents.map((f, i) => (
-              <Card key={i} className="border-border bg-card" style={{ boxShadow: "var(--card-shadow)" }}>
+              <Card key={i} className="border-border bg-card card-hover" style={{ boxShadow: "var(--card-shadow)" }}>
                 <CardContent className="p-5">
                   <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mb-3">
                     <f.icon className="h-5 w-5 text-primary" />
                   </div>
-                  <h3 className="font-semibold mb-1">{f.title}</h3>
+                  <h3 className="font-heading font-semibold mb-1">{f.title}</h3>
                   <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
                 </CardContent>
               </Card>
@@ -122,7 +120,7 @@ const TrustSection = () => (
             <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
               <t.icon className="h-7 w-7 text-primary" />
             </div>
-            <h3 className="font-semibold text-lg">{t.label}</h3>
+            <h3 className="font-heading font-semibold text-lg">{t.label}</h3>
             <p className="text-sm text-muted-foreground leading-relaxed">{t.sub}</p>
           </div>
         ))}
@@ -135,12 +133,12 @@ const CTASection = () => (
   <section className="py-20 pb-32 md:pb-20">
     <div className="container mx-auto px-4">
       <div className="max-w-2xl mx-auto rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10 p-10 md:p-14 text-center">
-        <h2 className="text-2xl md:text-3xl font-bold mb-3">Stop stressing over assignments</h2>
+        <h2 className="text-2xl md:text-3xl font-heading font-bold mb-3">Stop stressing over assignments</h2>
         <p className="text-muted-foreground max-w-md mx-auto mb-8">
           Sign up, post your first assignment, and get it done by a verified agent today.
         </p>
         <Link to="/auth">
-          <Button variant="hero" size="lg">
+          <Button size="lg" className="gold-glow h-12 px-8 font-semibold">
             Get Started <ArrowRight className="ml-2 h-5 w-5" />
           </Button>
         </Link>

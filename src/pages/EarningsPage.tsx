@@ -3,7 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { DollarSign, TrendingUp, CheckCircle, Clock, Loader2 } from "lucide-react";
+import { formatRWF } from "@/lib/contactFilter";
+import { TrendingUp, CheckCircle, Clock, Loader2, Wallet } from "lucide-react";
 
 const EarningsPage = () => {
   const { user } = useAuth();
@@ -31,28 +32,28 @@ const EarningsPage = () => {
   const pendingEarnings = pending.reduce((s, t) => s + (parseFloat(t.budget) || 0), 0);
 
   const stats = [
-    { label: "Total Earned", value: `₦${totalEarned.toLocaleString()}`, icon: DollarSign, color: "text-primary" },
-    { label: "Pending", value: `₦${pendingEarnings.toLocaleString()}`, icon: Clock, color: "text-warn" },
+    { label: "Total Earned", value: formatRWF(totalEarned), icon: Wallet, color: "text-primary" },
+    { label: "Pending", value: formatRWF(pendingEarnings), icon: Clock, color: "text-warn" },
     { label: "Completed Tasks", value: completed.length, icon: CheckCircle, color: "text-primary" },
     { label: "Active Tasks", value: pending.length, icon: TrendingUp, color: "text-info" },
   ];
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6 page-enter">
       <div>
-        <h2 className="text-2xl font-bold">Earnings</h2>
+        <h2 className="text-2xl font-heading font-bold">Earnings</h2>
         <p className="text-muted-foreground text-sm">Track your income and payout history.</p>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {stats.map((s, i) => (
-          <Card key={i} className="border-border" style={{ boxShadow: "var(--card-shadow)" }}>
+          <Card key={i} className="border-border animate-fade-in" style={{ boxShadow: "var(--card-shadow)", animationDelay: `${i * 80}ms` }}>
             <CardContent className="p-4 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
                 <s.icon className={`h-5 w-5 ${s.color}`} />
               </div>
-              <div>
-                <p className="text-2xl font-bold">{s.value}</p>
+              <div className="min-w-0">
+                <p className="text-lg md:text-2xl font-bold font-heading truncate">{s.value}</p>
                 <p className="text-xs text-muted-foreground">{s.label}</p>
               </div>
             </CardContent>
@@ -60,15 +61,12 @@ const EarningsPage = () => {
         ))}
       </div>
 
-      {/* Payout History */}
       <Card className="border-border" style={{ boxShadow: "var(--card-shadow)" }}>
-        <CardHeader>
-          <CardTitle className="text-sm">Payout History</CardTitle>
-        </CardHeader>
+        <CardHeader><CardTitle className="text-sm font-heading">Payout History</CardTitle></CardHeader>
         <CardContent>
           {completed.length === 0 ? (
             <div className="text-center py-8">
-              <DollarSign className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+              <Wallet className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
               <p className="text-sm text-muted-foreground">No completed tasks yet. Finish assignments to start earning.</p>
             </div>
           ) : (
@@ -83,7 +81,7 @@ const EarningsPage = () => {
                     </p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-sm font-bold text-primary">₦{Number(t.budget || 0).toLocaleString()}</span>
+                    <span className="text-sm font-bold text-primary">{formatRWF(t.budget)}</span>
                     <Badge variant="outline" className="text-[10px] bg-primary/5 text-primary border-primary/20">Paid</Badge>
                   </div>
                 </div>
@@ -93,12 +91,9 @@ const EarningsPage = () => {
         </CardContent>
       </Card>
 
-      {/* Pending */}
       {pending.length > 0 && (
         <Card className="border-border" style={{ boxShadow: "var(--card-shadow)" }}>
-          <CardHeader>
-            <CardTitle className="text-sm">Pending Earnings (In Escrow)</CardTitle>
-          </CardHeader>
+          <CardHeader><CardTitle className="text-sm font-heading">Pending Earnings (In Escrow)</CardTitle></CardHeader>
           <CardContent className="space-y-2">
             {pending.map((t) => (
               <div key={t.id} className="flex items-center justify-between py-3 border-b border-border/50 last:border-0">
@@ -106,7 +101,7 @@ const EarningsPage = () => {
                   <p className="text-sm font-medium truncate">{t.title}</p>
                   <p className="text-xs text-muted-foreground capitalize">{t.status.replace(/_/g, " ")}</p>
                 </div>
-                <span className="text-sm font-medium text-warn">₦{Number(t.budget || 0).toLocaleString()}</span>
+                <span className="text-sm font-medium text-warn">{formatRWF(t.budget)}</span>
               </div>
             ))}
           </CardContent>
