@@ -32,7 +32,6 @@ const ReputationPage = () => {
   const onTimeRate = totalReviews > 0 ? Math.round((onTimeCount / totalReviews) * 100) : 0;
   const fiveStarRate = totalReviews > 0 ? Math.round((reviews.filter(r => r.rating === 5).length / totalReviews) * 100) : 0;
 
-  // Rating distribution
   const distribution = [5, 4, 3, 2, 1].map(star => ({
     star,
     count: reviews.filter(r => r.rating === star).length,
@@ -47,22 +46,21 @@ const ReputationPage = () => {
   ];
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6 page-enter">
       <div>
-        <h2 className="text-2xl font-bold">Reputation</h2>
+        <h2 className="text-2xl font-heading font-bold">Reputation</h2>
         <p className="text-muted-foreground text-sm">Your performance metrics and client reviews.</p>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {stats.map((s, i) => (
-          <Card key={i} className="border-border" style={{ boxShadow: "var(--card-shadow)" }}>
+          <Card key={i} className="border-border animate-fade-in" style={{ boxShadow: "var(--card-shadow)", animationDelay: `${i * 80}ms` }}>
             <CardContent className="p-4 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
                 <s.icon className={`h-5 w-5 ${s.color}`} />
               </div>
               <div>
-                <p className="text-2xl font-bold">{s.value}</p>
+                <p className="text-2xl font-bold font-heading">{s.value}</p>
                 <p className="text-xs text-muted-foreground">{s.label}</p>
               </div>
             </CardContent>
@@ -70,11 +68,8 @@ const ReputationPage = () => {
         ))}
       </div>
 
-      {/* Rating Distribution */}
       <Card className="border-border" style={{ boxShadow: "var(--card-shadow)" }}>
-        <CardHeader>
-          <CardTitle className="text-sm">Rating Distribution</CardTitle>
-        </CardHeader>
+        <CardHeader><CardTitle className="text-sm font-heading">Rating Distribution</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           {distribution.map((d) => (
             <div key={d.star} className="flex items-center gap-3">
@@ -89,11 +84,8 @@ const ReputationPage = () => {
         </CardContent>
       </Card>
 
-      {/* Reviews List */}
       <Card className="border-border" style={{ boxShadow: "var(--card-shadow)" }}>
-        <CardHeader>
-          <CardTitle className="text-sm">Recent Reviews</CardTitle>
-        </CardHeader>
+        <CardHeader><CardTitle className="text-sm font-heading">Recent Reviews</CardTitle></CardHeader>
         <CardContent>
           {reviews.length === 0 ? (
             <div className="text-center py-8">

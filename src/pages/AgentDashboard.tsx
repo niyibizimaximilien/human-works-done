@@ -4,9 +4,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
+import { formatRWF } from "@/lib/contactFilter";
 import {
-  Briefcase, Clock, CheckCircle, DollarSign,
-  FileText, Zap, TrendingUp, Eye, Star
+  Briefcase, Clock, CheckCircle,
+  FileText, Zap, TrendingUp, Eye, Star, Loader2
 } from "lucide-react";
 import AssignmentDetail from "@/components/AssignmentDetail";
 
@@ -17,6 +18,7 @@ const AgentDashboard = () => {
   const [tab, setTab] = useState<"available" | "my">("available");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [reputation, setReputation] = useState({ avg: 0, count: 0, onTimeRate: 0 });
+  const [fetching, setFetching] = useState(true);
 
   useEffect(() => {
     if (user) { fetchAvailable(); fetchMyTasks(); fetchReputation(); }
@@ -25,6 +27,7 @@ const AgentDashboard = () => {
   const fetchAvailable = async () => {
     const { data } = await supabase.from("assignments").select("*").eq("status", "open").order("created_at", { ascending: false });
     setAvailableTasks(data || []);
+    setFetching(false);
   };
 
   const fetchMyTasks = async () => {
@@ -58,6 +61,10 @@ const AgentDashboard = () => {
     return <AssignmentDetail assignmentId={selectedId} onBack={() => { setSelectedId(null); fetchMyTasks(); fetchAvailable(); }} />;
   }
 
+  if (fetching) {
+    return <div className="flex items-center justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
+  }
+
   const completedCount = myTasks.filter(t => t.status === "completed").length;
   const totalEarnings = myTasks.filter(t => t.status === "completed").reduce((s, t) => s + (parseFloat(t.budget) || 0), 0);
   const activeCount = myTasks.filter(t => ["in_progress", "submitted"].includes(t.status)).length;
@@ -66,20 +73,20 @@ const AgentDashboard = () => {
     { label: "Available", value: availableTasks.length, icon: Zap, color: "text-info" },
     { label: "Active", value: activeCount, icon: Clock, color: "text-warn" },
     { label: "Completed", value: completedCount, icon: CheckCircle, color: "text-primary" },
-    { label: "Earnings", value: `₦${totalEarnings.toLocaleString()}`, icon: TrendingUp, color: "text-primary" },
+    { label: "Earnings", value: formatRWF(totalEarnings), icon: TrendingUp, color: "text-primary" },
   ];
 
   const tasks = tab === "available" ? availableTasks : myTasks;
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
         <div>
-          <h2 className="text-2xl font-bold">Agent Dashboard</h2>
+          <h2 className="text-2xl font-heading font-bold">Agent Dashboard</h2>
           <p className="text-muted-foreground text-sm">Find tasks, deliver, and grow your earnings.</p>
         </div>
         {reputation.count > 0 && (
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/10">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20">
             <Star className="h-4 w-4 text-primary fill-primary" />
             <span className="text-sm font-semibold">{reputation.avg}</span>
             <span className="text-xs text-muted-foreground">({reputation.count} reviews · {reputation.onTimeRate}% on-time)</span>
@@ -87,15 +94,15 @@ const AgentDashboard = () => {
         )}
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {stats.map((s, i) => (
-          <Card key={i} className="border-border" style={{ boxShadow: "var(--card-shadow)" }}>
+          <Card key={i} className="border-border animate-fade-in" style={{ boxShadow: "var(--card-shadow)", animationDelay: `${i * 80}ms` }}>
             <CardContent className="p-4 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
                 <s.icon className={`h-5 w-5 ${s.color}`} />
               </div>
-              <div>
-                <p className="text-2xl font-bold">{s.value}</p>
+              <div className="min-w-0">
+                <p className="text-xl md:text-2xl font-bold font-heading truncate">{s.value}</p>
                 <p className="text-xs text-muted-foreground">{s.label}</p>
               </div>
             </CardContent>
@@ -103,7 +110,7 @@ const AgentDashboard = () => {
         ))}
       </div>
 
-      <div className="flex gap-2 mb-6">
+      <div className="flex gap-2">
         <Button variant={tab === "available" ? "default" : "outline"} size="sm" onClick={() => setTab("available")}>
           <Zap className="mr-1.5 h-4 w-4" /> Available ({availableTasks.length})
         </Button>
@@ -117,13 +124,13 @@ const AgentDashboard = () => {
           <Card className="border-border" style={{ boxShadow: "var(--card-shadow)" }}>
             <CardContent className="py-12 text-center">
               <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="font-semibold mb-1">{tab === "available" ? "No tasks available" : "No tasks yet"}</h3>
+              <h3 className="font-heading font-semibold mb-1">{tab === "available" ? "No tasks available" : "No tasks yet"}</h3>
               <p className="text-sm text-muted-foreground">{tab === "available" ? "Check back soon." : "Accept a task to get started."}</p>
             </CardContent>
           </Card>
         ) : (
-          tasks.map((t) => (
-            <Card key={t.id} className="border-border card-hover cursor-pointer" style={{ boxShadow: "var(--card-shadow)" }}
+          tasks.map((t, i) => (
+            <Card key={t.id} className="border-border card-hover cursor-pointer animate-fade-in" style={{ boxShadow: "var(--card-shadow)", animationDelay: `${i * 60}ms` }}
               onClick={() => tab === "my" ? setSelectedId(t.id) : undefined}>
               <CardContent className="p-4">
                 <div className="flex items-start justify-between gap-4">
@@ -137,12 +144,12 @@ const AgentDashboard = () => {
                   </div>
                   <div className="flex flex-col items-end gap-2 shrink-0">
                     {t.budget && (
-                      <span className="text-sm font-semibold flex items-center gap-1 text-primary">
-                        <DollarSign className="h-3.5 w-3.5" />₦{Number(t.budget).toLocaleString()}
+                      <span className="text-sm font-semibold text-primary">
+                        {formatRWF(t.budget)}
                       </span>
                     )}
                     {tab === "available" ? (
-                      <Button size="sm" onClick={(e) => { e.stopPropagation(); acceptTask(t.id); }}>Accept</Button>
+                      <Button size="sm" className="gold-glow" onClick={(e) => { e.stopPropagation(); acceptTask(t.id); }}>Accept</Button>
                     ) : (
                       <div className="flex items-center gap-2">
                         <span className={`text-xs px-2 py-1 rounded-full font-medium ${
