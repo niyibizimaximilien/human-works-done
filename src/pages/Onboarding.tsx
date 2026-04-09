@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "@/hooks/use-toast";
-import { User, School, BookOpen, CheckCircle, ArrowRight, ArrowLeft, Camera, Loader2 } from "lucide-react";
+import { User, School, CheckCircle, ArrowRight, ArrowLeft, Camera, Loader2 } from "lucide-react";
 
 const steps = ["Personal Info", "University", "Complete"];
 
@@ -23,6 +23,7 @@ const Onboarding = () => {
   const [form, setForm] = useState({
     full_name: "",
     phone: "",
+    student_id_number: "",
     university: "",
     department: "",
     level: "",
@@ -50,16 +51,46 @@ const Onboarding = () => {
     setUploading(false);
   };
 
-  const handleFinish = async () => {
+  const validateStep0 = () => {
     if (!form.full_name.trim()) {
       toast({ title: "Name required", description: "Please enter your full name.", variant: "destructive" });
-      return;
+      return false;
     }
+    if (!form.student_id_number.trim()) {
+      toast({ title: "Student ID required", description: "Please enter your Student ID (e.g. 22xxxxxxx).", variant: "destructive" });
+      return false;
+    }
+    if (!/^22\d{7}$/.test(form.student_id_number.trim())) {
+      toast({ title: "Invalid Student ID", description: "Student ID must start with 22 followed by 7 digits.", variant: "destructive" });
+      return false;
+    }
+    if (!avatarUrl) {
+      toast({ title: "Photo required", description: "Please upload a profile photo for trust & verification.", variant: "destructive" });
+      return false;
+    }
+    return true;
+  };
+
+  const handleNext = () => {
+    if (step === 0 && !validateStep0()) return;
+    setStep(step + 1);
+  };
+
+  const handleFinish = async () => {
     setLoading(true);
     try {
       const { error } = await supabase
         .from("profiles")
-        .update({ ...form, avatar_url: avatarUrl || null, onboarding_completed: true })
+        .update({
+          full_name: form.full_name,
+          phone: form.phone,
+          student_id_number: form.student_id_number,
+          university: form.university,
+          department: form.department,
+          level: form.level,
+          avatar_url: avatarUrl || null,
+          onboarding_completed: true,
+        } as any)
         .eq("user_id", user?.id);
       if (error) throw error;
       await refreshProfile();
@@ -72,9 +103,8 @@ const Onboarding = () => {
     }
   };
 
-  const stepIcons = [User, School, BookOpen];
+  const stepIcons = [User, School, CheckCircle];
   const StepIcon = stepIcons[step];
-
   const initials = form.full_name ? form.full_name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase() : "?";
 
   return (
@@ -95,7 +125,6 @@ const Onboarding = () => {
         <CardContent className="space-y-4">
           {step === 0 && (
             <div className="animate-fade-in space-y-4">
-              {/* Avatar upload */}
               <div className="flex justify-center">
                 <div className="relative">
                   <Avatar className="h-24 w-24 border-2 border-border">
@@ -108,10 +137,15 @@ const Onboarding = () => {
                   </label>
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground text-center">Upload a profile photo (required for trust)</p>
+              <p className="text-xs text-muted-foreground text-center">Upload a profile photo (required)</p>
               <div>
                 <Label className="text-xs">Full Name *</Label>
                 <Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} placeholder="John Doe" maxLength={100} className="mt-1" />
+              </div>
+              <div>
+                <Label className="text-xs">Student ID *</Label>
+                <Input value={form.student_id_number} onChange={(e) => setForm({ ...form, student_id_number: e.target.value })} placeholder="22XXXXXXX" maxLength={9} className="mt-1" />
+                <p className="text-[10px] text-muted-foreground mt-1">Format: 22 followed by 7 digits</p>
               </div>
               <div>
                 <Label className="text-xs">Phone Number</Label>
@@ -139,9 +173,7 @@ const Onboarding = () => {
             <div className="text-center py-6 animate-fade-in">
               <CheckCircle className="h-16 w-16 text-primary mx-auto mb-4" />
               <h3 className="text-lg font-heading font-semibold mb-2">You're all set!</h3>
-              <p className="text-sm text-muted-foreground">
-                Your profile is ready. You can always update these details later from settings.
-              </p>
+              <p className="text-sm text-muted-foreground">Your profile is ready. You can update details later in settings.</p>
             </div>
           )}
           <div className="flex gap-3 pt-2">
@@ -151,7 +183,7 @@ const Onboarding = () => {
               </Button>
             )}
             {step < steps.length - 1 ? (
-              <Button onClick={() => setStep(step + 1)} className="flex-1 gold-glow">
+              <Button onClick={handleNext} className="flex-1 gold-glow">
                 Next <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             ) : (
