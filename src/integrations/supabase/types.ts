@@ -57,6 +57,7 @@ export type Database = {
       }
       assignments: {
         Row: {
+          admin_released: boolean
           agent_id: string | null
           budget: number | null
           created_at: string
@@ -66,6 +67,8 @@ export type Database = {
           file_url: string | null
           human_verified: boolean | null
           id: string
+          payment_proof_url: string | null
+          payment_status: string
           priority_fee: number | null
           reviewed_at: string | null
           sla_tier: string
@@ -74,9 +77,12 @@ export type Database = {
           subject: string | null
           submitted_at: string | null
           title: string
+          transfer_reason: string | null
+          transferred_from: string | null
           updated_at: string
         }
         Insert: {
+          admin_released?: boolean
           agent_id?: string | null
           budget?: number | null
           created_at?: string
@@ -86,6 +92,8 @@ export type Database = {
           file_url?: string | null
           human_verified?: boolean | null
           id?: string
+          payment_proof_url?: string | null
+          payment_status?: string
           priority_fee?: number | null
           reviewed_at?: string | null
           sla_tier?: string
@@ -94,9 +102,12 @@ export type Database = {
           subject?: string | null
           submitted_at?: string | null
           title: string
+          transfer_reason?: string | null
+          transferred_from?: string | null
           updated_at?: string
         }
         Update: {
+          admin_released?: boolean
           agent_id?: string | null
           budget?: number | null
           created_at?: string
@@ -106,6 +117,8 @@ export type Database = {
           file_url?: string | null
           human_verified?: boolean | null
           id?: string
+          payment_proof_url?: string | null
+          payment_status?: string
           priority_fee?: number | null
           reviewed_at?: string | null
           sla_tier?: string
@@ -114,6 +127,8 @@ export type Database = {
           subject?: string | null
           submitted_at?: string | null
           title?: string
+          transfer_reason?: string | null
+          transferred_from?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -220,6 +235,7 @@ export type Database = {
           level: string | null
           onboarding_completed: boolean
           phone: string | null
+          student_id_number: string | null
           university: string | null
           updated_at: string
           user_id: string
@@ -233,6 +249,7 @@ export type Database = {
           level?: string | null
           onboarding_completed?: boolean
           phone?: string | null
+          student_id_number?: string | null
           university?: string | null
           updated_at?: string
           user_id: string
@@ -246,6 +263,7 @@ export type Database = {
           level?: string | null
           onboarding_completed?: boolean
           phone?: string | null
+          student_id_number?: string | null
           university?: string | null
           updated_at?: string
           user_id?: string

@@ -3,36 +3,57 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { formatRWF } from "@/lib/contactFilter";
 import {
-  Briefcase, Clock, CheckCircle,
-  FileText, Zap, TrendingUp, Eye, Star, Loader2
+  Briefcase, Clock, CheckCircle, FileText, Zap, TrendingUp,
+  Eye, Star, Loader2, Upload, Download, Send, ArrowLeft
 } from "lucide-react";
-import AssignmentDetail from "@/components/AssignmentDetail";
 
 const AgentDashboard = () => {
   const { user } = useAuth();
-  const [availableTasks, setAvailableTasks] = useState<any[]>([]);
   const [myTasks, setMyTasks] = useState<any[]>([]);
-  const [tab, setTab] = useState<"available" | "my">("available");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [reputation, setReputation] = useState({ avg: 0, count: 0, onTimeRate: 0 });
   const [fetching, setFetching] = useState(true);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
-    if (user) { fetchAvailable(); fetchMyTasks(); fetchReputation(); }
+    if (user) { fetchMyTasks(); fetchReputation(); }
   }, [user]);
 
-  const fetchAvailable = async () => {
-    const { data } = await supabase.from("assignments").select("*").eq("status", "open").order("created_at", { ascending: false });
-    setAvailableTasks(data || []);
-    setFetching(false);
+  // Real-time
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel("agent-tasks")
+      .on("postgres_changes", { event: "*", schema: "public", table: "assignments", filter: `agent_id=eq.${user.id}` },
+        () => { fetchMyTasks(); playSound(); }
+      )
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` },
+        () => { playSound(); }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user]);
+
+  const playSound = () => {
+    try {
+      const ctx = new AudioContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.frequency.value = 600; gain.gain.value = 0.1;
+      osc.start(); osc.stop(ctx.currentTime + 0.15);
+    } catch {}
   };
 
   const fetchMyTasks = async () => {
-    const { data } = await supabase.from("assignments").select("*").eq("agent_id", user!.id).order("created_at", { ascending: false });
+    const { data } = await supabase.from("assignments").select("*")
+      .eq("agent_id", user!.id).order("created_at", { ascending: false });
     setMyTasks(data || []);
+    setFetching(false);
   };
 
   const fetchReputation = async () => {
@@ -44,25 +65,126 @@ const AgentDashboard = () => {
     }
   };
 
-  const acceptTask = async (id: string) => {
-    try {
-      const { error } = await supabase.from("assignments")
-        .update({ agent_id: user!.id, status: "in_progress" })
-        .eq("id", id).eq("status", "open");
-      if (error) throw error;
-      toast({ title: "Task accepted!" });
-      fetchAvailable(); fetchMyTasks();
-    } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+  const handleDeliverableUpload = async (assignmentId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    const path = `${assignmentId}/${Date.now()}-${file.name}`;
+    const { error } = await supabase.storage.from("deliverables").upload(path, file);
+    if (error) {
+      toast({ title: "Upload failed", description: error.message, variant: "destructive" });
+    } else {
+      await supabase.from("assignments").update({
+        deliverable_url: path,
+      } as any).eq("id", assignmentId);
+      toast({ title: "Deliverable uploaded!" });
+      fetchMyTasks();
     }
+    setUploading(false);
   };
 
-  if (selectedId) {
-    return <AssignmentDetail assignmentId={selectedId} onBack={() => { setSelectedId(null); fetchMyTasks(); fetchAvailable(); }} />;
-  }
+  const submitToAdmin = async (assignmentId: string) => {
+    const { error } = await supabase.from("assignments").update({
+      status: "submitted",
+      submitted_at: new Date().toISOString(),
+    }).eq("id", assignmentId);
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      return;
+    }
+    // Notify admins
+    const { data: adminRoles } = await supabase.from("user_roles").select("user_id").eq("role", "admin");
+    if (adminRoles) {
+      for (const ar of adminRoles) {
+        await supabase.from("notifications").insert({
+          user_id: ar.user_id,
+          title: "Assignment Submitted for Review 📋",
+          message: `An agent submitted completed work for review.`,
+          link: "/dashboard",
+        });
+      }
+    }
+    toast({ title: "Submitted to admin for review!" });
+    fetchMyTasks();
+  };
+
+  const downloadFile = async (bucket: string, path: string) => {
+    const { data, error } = await supabase.storage.from(bucket).download(path);
+    if (error || !data) { toast({ title: "Download failed", variant: "destructive" }); return; }
+    const url = URL.createObjectURL(data);
+    const a = document.createElement("a");
+    a.href = url; a.download = path.split("/").pop() || "file"; a.click();
+    URL.revokeObjectURL(url);
+  };
 
   if (fetching) {
     return <div className="flex items-center justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
+  }
+
+  if (selectedId) {
+    const task = myTasks.find(t => t.id === selectedId);
+    if (!task) { setSelectedId(null); return null; }
+    return (
+      <div className="max-w-3xl mx-auto space-y-4 page-enter">
+        <Button variant="ghost" size="sm" onClick={() => setSelectedId(null)}>
+          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Tasks
+        </Button>
+        <Card className="border-border" style={{ boxShadow: "var(--card-shadow)" }}>
+          <CardContent className="p-5 space-y-4">
+            <div className="flex justify-between items-start">
+              <div>
+                <h3 className="text-lg font-heading font-bold">{task.title}</h3>
+                <p className="text-sm text-muted-foreground mt-1">{task.description}</p>
+                {task.subject && <Badge variant="secondary" className="mt-2">{task.subject}</Badge>}
+              </div>
+              <Badge variant="outline" className="capitalize">{task.status.replace(/_/g, " ")}</Badge>
+            </div>
+            <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+              <span><Clock className="inline h-3.5 w-3.5 mr-1" />Due: {new Date(task.deadline).toLocaleString()}</span>
+              {task.budget && <span className="text-primary font-semibold">{formatRWF(task.budget)}</span>}
+            </div>
+
+            <div className="flex flex-wrap gap-2 pt-3 border-t border-border">
+              {/* Download assignment brief */}
+              {task.file_url && (
+                <Button variant="outline" size="sm" onClick={() => downloadFile("assignment-files", task.file_url)}>
+                  <Download className="mr-1.5 h-4 w-4" /> Assignment Brief
+                </Button>
+              )}
+
+              {/* Upload deliverable */}
+              {task.status === "in_progress" && (
+                <>
+                  <label className="cursor-pointer">
+                    <input type="file" className="hidden" onChange={(e) => handleDeliverableUpload(task.id, e)} disabled={uploading}
+                      accept=".pdf,.doc,.docx,.txt,.ppt,.pptx,.xls,.xlsx,.jpg,.jpeg,.png,.gif,.zip,.rar" />
+                    <Button variant="outline" size="sm" asChild disabled={uploading}>
+                      <span><Upload className="mr-1.5 h-4 w-4" /> {uploading ? "Uploading..." : "Upload Answer"}</span>
+                    </Button>
+                  </label>
+                  {task.deliverable_url && (
+                    <Button size="sm" className="gold-glow" onClick={() => submitToAdmin(task.id)}>
+                      <Send className="mr-1.5 h-4 w-4" /> Submit to Admin
+                    </Button>
+                  )}
+                </>
+              )}
+
+              {task.status === "submitted" && (
+                <div className="text-sm text-info flex items-center gap-2">
+                  <Clock className="h-4 w-4" /> Submitted. Waiting for admin review.
+                </div>
+              )}
+              {task.status === "completed" && (
+                <div className="text-sm text-primary flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4" /> Completed & paid.
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   const completedCount = myTasks.filter(t => t.status === "completed").length;
@@ -70,20 +192,18 @@ const AgentDashboard = () => {
   const activeCount = myTasks.filter(t => ["in_progress", "submitted"].includes(t.status)).length;
 
   const stats = [
-    { label: "Available", value: availableTasks.length, icon: Zap, color: "text-info" },
+    { label: "Received", value: myTasks.length, icon: Briefcase, color: "text-primary" },
     { label: "Active", value: activeCount, icon: Clock, color: "text-warn" },
     { label: "Completed", value: completedCount, icon: CheckCircle, color: "text-primary" },
     { label: "Earnings", value: formatRWF(totalEarnings), icon: TrendingUp, color: "text-primary" },
   ];
-
-  const tasks = tab === "available" ? availableTasks : myTasks;
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
         <div>
           <h2 className="text-2xl font-heading font-bold">Agent Dashboard</h2>
-          <p className="text-muted-foreground text-sm">Find tasks, deliver, and grow your earnings.</p>
+          <p className="text-muted-foreground text-sm">Manage received assignments and deliver work.</p>
         </div>
         {reputation.count > 0 && (
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20">
@@ -110,58 +230,40 @@ const AgentDashboard = () => {
         ))}
       </div>
 
-      <div className="flex gap-2">
-        <Button variant={tab === "available" ? "default" : "outline"} size="sm" onClick={() => setTab("available")}>
-          <Zap className="mr-1.5 h-4 w-4" /> Available ({availableTasks.length})
-        </Button>
-        <Button variant={tab === "my" ? "default" : "outline"} size="sm" onClick={() => setTab("my")}>
-          <Briefcase className="mr-1.5 h-4 w-4" /> My Tasks ({myTasks.length})
-        </Button>
-      </div>
-
       <div className="space-y-3">
-        {tasks.length === 0 ? (
+        {myTasks.length === 0 ? (
           <Card className="border-border" style={{ boxShadow: "var(--card-shadow)" }}>
             <CardContent className="py-12 text-center">
               <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="font-heading font-semibold mb-1">{tab === "available" ? "No tasks available" : "No tasks yet"}</h3>
-              <p className="text-sm text-muted-foreground">{tab === "available" ? "Check back soon." : "Accept a task to get started."}</p>
+              <h3 className="font-heading font-semibold mb-1">No tasks yet</h3>
+              <p className="text-sm text-muted-foreground">You'll receive assignments from students here.</p>
             </CardContent>
           </Card>
         ) : (
-          tasks.map((t, i) => (
-            <Card key={t.id} className="border-border card-hover cursor-pointer animate-fade-in" style={{ boxShadow: "var(--card-shadow)", animationDelay: `${i * 60}ms` }}
-              onClick={() => tab === "my" ? setSelectedId(t.id) : undefined}>
+          myTasks.map((t, i) => (
+            <Card key={t.id} className="border-border card-hover cursor-pointer animate-fade-in"
+              style={{ boxShadow: "var(--card-shadow)", animationDelay: `${i * 60}ms` }}
+              onClick={() => setSelectedId(t.id)}>
               <CardContent className="p-4">
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0 flex-1">
                     <p className="font-medium">{t.title}</p>
                     <p className="text-xs text-muted-foreground mt-1">
                       {t.subject && `${t.subject} · `}Due {new Date(t.deadline).toLocaleDateString()}
-                      {t.sla_tier && t.sla_tier !== "standard" && ` · ${t.sla_tier.toUpperCase()}`}
                     </p>
-                    {t.description && <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{t.description}</p>}
                   </div>
                   <div className="flex flex-col items-end gap-2 shrink-0">
-                    {t.budget && (
-                      <span className="text-sm font-semibold text-primary">
-                        {formatRWF(t.budget)}
+                    {t.budget && <span className="text-sm font-semibold text-primary">{formatRWF(t.budget)}</span>}
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                        t.status === "in_progress" ? "bg-warn/10 text-warn" :
+                        t.status === "submitted" ? "bg-info/10 text-info" :
+                        "bg-primary/10 text-primary"
+                      }`}>
+                        {t.status.replace(/_/g, " ")}
                       </span>
-                    )}
-                    {tab === "available" ? (
-                      <Button size="sm" className="gold-glow" onClick={(e) => { e.stopPropagation(); acceptTask(t.id); }}>Accept</Button>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                          t.status === "in_progress" ? "bg-warn/10 text-warn" :
-                          t.status === "submitted" ? "bg-info/10 text-info" :
-                          "bg-primary/10 text-primary"
-                        }`}>
-                          {t.status.replace(/_/g, " ")}
-                        </span>
-                        <Eye className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                    )}
+                      <Eye className="h-4 w-4 text-muted-foreground" />
+                    </div>
                   </div>
                 </div>
               </CardContent>

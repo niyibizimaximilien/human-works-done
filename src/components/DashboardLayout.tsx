@@ -9,8 +9,8 @@ import {
 import { NavLink } from "@/components/NavLink";
 import {
   LayoutDashboard, FileText, Settings, LogOut, Users,
-  ShieldCheck, Briefcase, Zap, TrendingUp, BookOpen,
-  MessageSquare, ScrollText, Star, Eye,
+  ShieldCheck, Briefcase, TrendingUp, BookOpen,
+  ScrollText, Star, CreditCard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import NotificationsBell from "@/components/NotificationsBell";
@@ -19,17 +19,14 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 const studentNav = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "My Assignments", url: "/dashboard/assignments", icon: FileText },
-  { title: "Messages", url: "/dashboard/messages", icon: MessageSquare },
   { title: "Settings", url: "/dashboard/settings", icon: Settings },
 ];
 
 const agentNav = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Available Tasks", url: "/dashboard/tasks", icon: Zap },
   { title: "My Tasks", url: "/dashboard/my-tasks", icon: Briefcase },
   { title: "Earnings", url: "/dashboard/earnings", icon: TrendingUp },
   { title: "Reputation", url: "/dashboard/reputation", icon: Star },
-  { title: "Messages", url: "/dashboard/messages", icon: MessageSquare },
   { title: "Settings", url: "/dashboard/settings", icon: Settings },
 ];
 
@@ -37,7 +34,7 @@ const adminNav = [
   { title: "Overview", url: "/dashboard", icon: LayoutDashboard },
   { title: "Users", url: "/dashboard/users", icon: Users },
   { title: "Assignments", url: "/dashboard/all-assignments", icon: BookOpen },
-  { title: "Messages", url: "/dashboard/messages", icon: Eye },
+  { title: "Payments", url: "/dashboard/payments", icon: CreditCard },
   { title: "Roles", url: "/dashboard/roles", icon: ShieldCheck },
   { title: "Audit Log", url: "/dashboard/audit", icon: ScrollText },
   { title: "Settings", url: "/dashboard/settings", icon: Settings },
@@ -48,15 +45,9 @@ function SidebarNav() {
   const navigate = useNavigate();
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
-
   const navItems = role === "admin" ? adminNav : role === "agent" ? agentNav : studentNav;
-
   const initials = (profile?.full_name || user?.email || "U")
-    .split(" ")
-    .map((w: string) => w[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
+    .split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase();
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
@@ -114,7 +105,6 @@ function SidebarNav() {
   );
 }
 
-// Mobile bottom nav for dashboard
 function MobileBottomNav() {
   const { role } = useAuth();
   const location = useLocation();
@@ -126,14 +116,10 @@ function MobileBottomNav() {
         {navItems.map((item) => {
           const isActive = location.pathname === item.url || (item.url !== "/dashboard" && location.pathname.startsWith(item.url));
           return (
-            <NavLink
-              key={item.title}
-              to={item.url}
-              end
+            <NavLink key={item.title} to={item.url} end
               className={`flex flex-col items-center justify-center gap-0.5 flex-1 py-1 transition-colors ${
                 isActive ? "text-primary" : "text-muted-foreground"
-              }`}
-            >
+              }`}>
               <item.icon className="h-5 w-5" />
               <span className="text-[10px] font-medium">{item.title}</span>
             </NavLink>
@@ -153,13 +139,9 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
         </div>
         <div className="flex-1 flex flex-col">
           <header className="h-14 border-b border-border bg-card/50 backdrop-blur-xl flex items-center justify-between px-4 sticky top-0 z-40">
-            <div className="hidden md:block">
-              <SidebarTrigger />
-            </div>
+            <div className="hidden md:block"><SidebarTrigger /></div>
             <div className="md:hidden">
-              <span className="text-sm font-heading font-bold">
-                MR<span className="text-primary">.</span>A
-              </span>
+              <span className="text-sm font-heading font-bold">MR<span className="text-primary">.</span>A</span>
             </div>
             <NotificationsBell />
           </header>

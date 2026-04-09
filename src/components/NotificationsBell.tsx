@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -8,12 +8,44 @@ import { Bell } from "lucide-react";
 const NotificationsBell = () => {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<any[]>([]);
+  const prevCountRef = useRef(0);
   const unread = notifications.filter(n => !n.read).length;
 
   useEffect(() => {
     if (!user) return;
     fetchNotifications();
+
+    // Real-time notifications
+    const channel = supabase
+      .channel("notifications-bell")
+      .on("postgres_changes", {
+        event: "INSERT", schema: "public", table: "notifications",
+        filter: `user_id=eq.${user.id}`,
+      }, (payload) => {
+        setNotifications(prev => [payload.new as any, ...prev]);
+        playNotificationSound();
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, [user]);
+
+  const playNotificationSound = () => {
+    try {
+      const ctx = new AudioContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      osc.frequency.setValueAtTime(1100, ctx.currentTime + 0.1);
+      gain.gain.setValueAtTime(0.15, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.3);
+    } catch {}
+  };
 
   const fetchNotifications = async () => {
     const { data } = await supabase.from("notifications").select("*")
@@ -26,21 +58,33 @@ const NotificationsBell = () => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
   };
 
+  const markAllRead = async () => {
+    const unreadIds = notifications.filter(n => !n.read).map(n => n.id);
+    if (unreadIds.length === 0) return;
+    for (const id of unreadIds) {
+      await supabase.from("notifications").update({ read: true }).eq("id", id);
+    }
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+  };
+
   return (
     <Popover>
       <PopoverTrigger asChild>
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="h-4 w-4" />
           {unread > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-primary text-primary-foreground text-[10px] flex items-center justify-center font-bold">
+            <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-primary text-primary-foreground text-[10px] flex items-center justify-center font-bold animate-pulse">
               {unread}
             </span>
           )}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-80 p-0" align="end">
-        <div className="p-3 border-b border-border">
+        <div className="p-3 border-b border-border flex items-center justify-between">
           <p className="text-sm font-semibold">Notifications</p>
+          {unread > 0 && (
+            <button onClick={markAllRead} className="text-[10px] text-primary hover:underline">Mark all read</button>
+          )}
         </div>
         <div className="max-h-64 overflow-y-auto">
           {notifications.length === 0 ? (
