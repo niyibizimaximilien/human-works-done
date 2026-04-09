@@ -8,7 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "@/hooks/use-toast";
 import { Save, User, Shield, Camera, Loader2 } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 
 const SettingsPage = () => {
@@ -18,6 +17,7 @@ const SettingsPage = () => {
   const [form, setForm] = useState({
     full_name: profile?.full_name || "",
     phone: profile?.phone || "",
+    student_id_number: (profile as any)?.student_id_number || "",
     university: profile?.university || "",
     department: profile?.department || "",
     level: profile?.level || "",
@@ -27,7 +27,7 @@ const SettingsPage = () => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 2 * 1024 * 1024) {
-      toast({ title: "File too large", description: "Max 2MB for profile photos.", variant: "destructive" });
+      toast({ title: "File too large", description: "Max 2MB.", variant: "destructive" });
       return;
     }
     setUploading(true);
@@ -46,12 +46,16 @@ const SettingsPage = () => {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (form.student_id_number && !/^22\d{7}$/.test(form.student_id_number)) {
+      toast({ title: "Invalid Student ID", description: "Must start with 22 followed by 7 digits.", variant: "destructive" });
+      return;
+    }
     setLoading(true);
     try {
-      const { error } = await supabase.from("profiles").update(form).eq("user_id", user!.id);
+      const { error } = await supabase.from("profiles").update(form as any).eq("user_id", user!.id);
       if (error) throw error;
       await refreshProfile();
-      toast({ title: "Settings saved", description: "Your profile has been updated." });
+      toast({ title: "Settings saved!" });
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     } finally {
@@ -66,10 +70,9 @@ const SettingsPage = () => {
     <div className="max-w-2xl mx-auto space-y-6 page-enter">
       <div>
         <h2 className="text-2xl font-heading font-bold">Settings</h2>
-        <p className="text-muted-foreground text-sm">Manage your profile and preferences.</p>
+        <p className="text-muted-foreground text-sm">Manage your profile and account.</p>
       </div>
 
-      {/* Avatar */}
       <Card className="border-border" style={{ boxShadow: "var(--card-shadow)" }}>
         <CardContent className="p-6 flex items-center gap-5">
           <div className="relative">
@@ -90,20 +93,23 @@ const SettingsPage = () => {
         </CardContent>
       </Card>
 
-      {/* Profile */}
       <Card className="border-border" style={{ boxShadow: "var(--card-shadow)" }}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg font-heading">
             <User className="h-5 w-5 text-primary" /> Profile Information
           </CardTitle>
-          <CardDescription>Update your personal details.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSave} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label className="text-xs">Full Name</Label>
+                <Label className="text-xs">Full Name *</Label>
                 <Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} maxLength={100} className="mt-1" />
+              </div>
+              <div>
+                <Label className="text-xs">Student ID *</Label>
+                <Input value={form.student_id_number} onChange={(e) => setForm({ ...form, student_id_number: e.target.value })} placeholder="22XXXXXXX" maxLength={9} className="mt-1" />
+                <p className="text-[10px] text-muted-foreground mt-1">Format: 22 + 7 digits</p>
               </div>
               <div>
                 <Label className="text-xs">Phone</Label>
@@ -129,7 +135,6 @@ const SettingsPage = () => {
         </CardContent>
       </Card>
 
-      {/* Account Info */}
       <Card className="border-border" style={{ boxShadow: "var(--card-shadow)" }}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg font-heading">
@@ -149,14 +154,6 @@ const SettingsPage = () => {
               <p className="text-sm font-medium">Role</p>
               <p className="text-xs text-muted-foreground capitalize">{role || "student"}</p>
             </div>
-          </div>
-          <Separator />
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="text-sm font-medium">Email Notifications</p>
-              <p className="text-xs text-muted-foreground">Receive updates about your assignments</p>
-            </div>
-            <Switch defaultChecked />
           </div>
         </CardContent>
       </Card>

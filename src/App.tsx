@@ -10,9 +10,8 @@ import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
 import DashboardHome from "./pages/DashboardHome";
 import SettingsPage from "./pages/SettingsPage";
-import MessagesPage from "./pages/MessagesPage";
-import ReputationPage from "./pages/ReputationPage";
 import EarningsPage from "./pages/EarningsPage";
+import ReputationPage from "./pages/ReputationPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -32,15 +31,14 @@ const App = () => (
               <Route index element={<DashboardHome />} />
               <Route path="settings" element={<SettingsPage />} />
               <Route path="assignments" element={<DashboardHome />} />
-              <Route path="tasks" element={<DashboardHome />} />
               <Route path="my-tasks" element={<DashboardHome />} />
               <Route path="earnings" element={<EarningsPage />} />
               <Route path="reputation" element={<ReputationPage />} />
-              <Route path="messages" element={<MessagesPage />} />
               <Route path="users" element={<DashboardHome />} />
               <Route path="all-assignments" element={<DashboardHome />} />
               <Route path="roles" element={<DashboardHome />} />
               <Route path="audit" element={<DashboardHome />} />
+              <Route path="payments" element={<DashboardHome />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
