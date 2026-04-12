@@ -514,7 +514,16 @@ const AdminDashboard = () => {
       {/* Payments */}
       {tab === "payments" && (
         <Card className="border-border" style={{ boxShadow: "var(--card-shadow)" }}>
-          <CardHeader><CardTitle className="flex items-center gap-2 font-heading"><CreditCard className="h-5 w-5 text-primary" /> Payment Management</CardTitle></CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="flex items-center gap-2 font-heading"><CreditCard className="h-5 w-5 text-primary" /> Payment Management</CardTitle>
+            {selectedPayments.size > 0 && (
+              <ConfirmDialog
+                trigger={<Button size="sm" className="gold-glow tap-highlight" disabled={bulkLoading}>Release {selectedPayments.size} Selected</Button>}
+                title={`Release ${selectedPayments.size} results?`} description="Make sure all payment proofs are verified."
+                onConfirm={bulkReleasePayments} confirmText="Release All"
+              />
+            )}
+          </CardHeader>
           <CardContent>
             {assignments.filter(a => a.payment_status !== "none").length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">No payments yet.</p>
@@ -522,7 +531,11 @@ const AdminDashboard = () => {
               <div className="space-y-3">
                 {assignments.filter(a => a.payment_status !== "none").map(a => (
                   <div key={a.id} className="flex items-center justify-between py-3 px-3 border border-border/50 rounded-lg">
-                    <div>
+                    {a.payment_status === "paid" && !a.admin_released && (
+                      <input type="checkbox" className="h-4 w-4 rounded accent-primary mr-3 shrink-0" checked={selectedPayments.has(a.id)}
+                        onChange={(e) => { const next = new Set(selectedPayments); e.target.checked ? next.add(a.id) : next.delete(a.id); setSelectedPayments(next); }} />
+                    )}
+                    <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium">{a.title}</p>
                       <p className="text-xs text-muted-foreground">Student: {profiles[a.student_id]?.full_name || "—"} · {formatRWF(a.budget)}</p>
                       {a.payment_proof_url && (
