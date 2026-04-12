@@ -296,6 +296,14 @@ const StudentDashboard = () => {
     const sl = statusLabel(assignment);
     const agentProfile = agents.find(a => a.user_id === assignment.agent_id);
     const hasReviewed = reviews.includes(assignment.id);
+
+    // Confetti on completed assignments
+    if (assignment.admin_released) {
+      setTimeout(() => {
+        confetti({ particleCount: 80, spread: 60, origin: { y: 0.7 } });
+      }, 300);
+    }
+
     return (
       <div className="max-w-3xl mx-auto space-y-4 page-enter">
         <Button variant="ghost" size="sm" onClick={() => setSelectedId(null)} className="mb-2 tap-highlight">← Back</Button>
@@ -626,10 +634,15 @@ const StudentDashboard = () => {
                 <CardContent className="p-4 flex items-center justify-between">
                   <div className="flex items-center gap-3 min-w-0">
                     {agentProfile && (
-                      <Avatar className="h-8 w-8 shrink-0 hidden sm:flex">
-                        <AvatarImage src={agentProfile.avatar_url || undefined} />
-                        <AvatarFallback className="bg-primary/10 text-primary text-[10px]">{(agentProfile.full_name || "A").slice(0, 2).toUpperCase()}</AvatarFallback>
-                      </Avatar>
+                      <div className="relative">
+                        <Avatar className="h-8 w-8 shrink-0 hidden sm:flex">
+                          <AvatarImage src={agentProfile.avatar_url || undefined} />
+                          <AvatarFallback className="bg-primary/10 text-primary text-[10px]">{(agentProfile.full_name || "A").slice(0, 2).toUpperCase()}</AvatarFallback>
+                        </Avatar>
+                        {agentProfile.lastActiveAt && (Date.now() - new Date(agentProfile.lastActiveAt).getTime()) < 300_000 && (
+                          <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-[hsl(var(--success))] border-2 border-background rounded-full hidden sm:block" />
+                        )}
+                      </div>
                     )}
                     <div className="min-w-0">
                       <p className="font-medium truncate">{a.title}</p>
