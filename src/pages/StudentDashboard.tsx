@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import confetti from "canvas-confetti";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,6 +29,7 @@ import AssignmentChat from "@/components/AssignmentChat";
 import { PageTransition, StaggerGrid, StaggerItem } from "@/components/MotionWrappers";
 import { StatsSkeleton, CardListSkeleton } from "@/components/DashboardSkeleton";
 import useUnsavedChangesWarning from "@/hooks/useUnsavedChangesWarning";
+import useKeyboardShortcuts from "@/hooks/useKeyboardShortcuts";
 
 const SLA_OPTIONS = [
   { value: "standard", label: "Standard (48h)", fee: 0 },
@@ -46,6 +48,7 @@ interface AgentInfo {
   avgRating: number;
   reviewCount: number;
   onTimeRate: number;
+  lastActiveAt: string | null;
 }
 
 const StudentDashboard = () => {
@@ -71,6 +74,12 @@ const StudentDashboard = () => {
   // Warn if navigating away with unsaved form data
   const formIsDirty = showNew && (form.title.trim().length > 0 || form.description.trim().length > 0);
   useUnsavedChangesWarning(formIsDirty);
+
+  // Keyboard shortcuts: n = new assignment, Escape = close detail/form
+  useKeyboardShortcuts(useCallback(() => ({
+    "n": () => { if (!showNew && !selectedId) setShowNew(true); },
+    "Escape": () => { if (selectedId) setSelectedId(null); else if (showNew) setShowNew(false); },
+  }), [showNew, selectedId])());
 
   useEffect(() => {
     if (user) { fetchAssignments(); checkAgentRequest(); fetchAgents(); fetchMyReviews(); }
@@ -134,6 +143,7 @@ const StudentDashboard = () => {
           avgRating: Math.round(avgRating * 10) / 10,
           reviewCount: ar.length,
           onTimeRate: Math.round(onTimeRate),
+          lastActiveAt: p.last_active_at,
         };
       });
       setAgents(agentList);
@@ -385,7 +395,7 @@ const StudentDashboard = () => {
               </Card>
             )}
             {assignment.payment_status === "paid" && !assignment.admin_released && (
-              <div className="text-sm text-info flex items-center gap-2 bg-info/5 px-3 py-2 rounded-lg">
+              <div className="text-sm text-[hsl(var(--info))] flex items-center gap-2 bg-[hsl(var(--info))]/5 px-3 py-2 rounded-lg">
                 <Clock className="h-4 w-4" /> Payment proof submitted. Waiting for admin to release.
               </div>
             )}

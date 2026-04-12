@@ -283,8 +283,9 @@ const AgentDashboard = () => {
                   <div className="flex flex-col items-end gap-2 shrink-0">
                     {t.budget && <span className="text-sm font-semibold text-primary">{formatRWF(t.budget)}</span>}
                     <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                      t.status === "in_progress" ? "bg-warn/10 text-warn" :
-                      t.status === "submitted" ? "bg-info/10 text-info" :
+                      t.status === "in_progress" ? "bg-[hsl(var(--warn))]/10 text-[hsl(var(--warn))]" :
+                      t.status === "submitted" ? "bg-[hsl(var(--info))]/10 text-[hsl(var(--info))]" :
+                      t.status === "completed" ? "bg-[hsl(var(--success))]/10 text-[hsl(var(--success))]" :
                       "bg-primary/10 text-primary"
                     }`}>{t.status.replace(/_/g, " ")}</span>
                   </div>
