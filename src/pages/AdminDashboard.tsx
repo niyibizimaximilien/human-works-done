@@ -176,10 +176,10 @@ const AdminDashboard = () => {
   const pendingPayment = assignments.filter(a => a.payment_status === "paid" && !a.admin_released);
 
   const stats = [
-    { label: "Users", value: users.length, icon: Users, color: "text-primary" },
-    { label: "Assignments", value: assignments.length, icon: FileText, color: "text-info" },
-    { label: "Needs Review", value: submittedForReview.length, icon: Clock, color: "text-warn" },
-    { label: "Revenue", value: formatRWF(totalRevenue), icon: TrendingUp, color: "text-primary" },
+    { label: "Users", value: users.length, icon: Users, color: "text-primary", bg: "bg-primary/10" },
+    { label: "Assignments", value: assignments.length, icon: FileText, color: "text-[hsl(var(--info))]", bg: "bg-[hsl(var(--info))]/10" },
+    { label: "Needs Review", value: submittedForReview.length, icon: Clock, color: "text-[hsl(var(--warn))]", bg: "bg-[hsl(var(--warn))]/10" },
+    { label: "Revenue", value: formatRWF(totalRevenue), icon: TrendingUp, color: "text-[hsl(var(--success))]", bg: "bg-[hsl(var(--success))]/10" },
   ];
 
   const tabs = [
