@@ -456,7 +456,14 @@ const AdminDashboard = () => {
       {/* Requests */}
       {tab === "requests" && (
         <Card className="border-border" style={{ boxShadow: "var(--card-shadow)" }}>
-          <CardHeader><CardTitle className="flex items-center gap-2 font-heading"><UserCheck className="h-5 w-5 text-primary" /> Agent Requests</CardTitle></CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="flex items-center gap-2 font-heading"><UserCheck className="h-5 w-5 text-primary" /> Agent Requests</CardTitle>
+            {selectedRequests.size > 0 && (
+              <Button size="sm" className="gold-glow tap-highlight" disabled={bulkLoading} onClick={bulkApproveAgents}>
+                Approve {selectedRequests.size} Selected
+              </Button>
+            )}
+          </CardHeader>
           <CardContent>
             {agentRequests.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">No pending requests.</p>
