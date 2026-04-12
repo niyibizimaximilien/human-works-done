@@ -215,20 +215,34 @@ const AgentDashboard = () => {
     { label: "Earnings", value: formatRWF(totalEarnings), icon: TrendingUp, color: "text-[hsl(var(--info))]", bg: "bg-[hsl(var(--info))]/10" },
   ];
 
-  return (
+    return (
+    <PageTransition>
     <div className="max-w-5xl mx-auto space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
         <div>
           <h2 className="text-2xl font-heading font-bold">Agent Dashboard</h2>
           <p className="text-muted-foreground text-sm">Manage received assignments and deliver work.</p>
         </div>
-        {reputation.count > 0 && (
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20">
-            <Star className="h-4 w-4 text-primary fill-primary" />
-            <span className="text-sm font-semibold">{reputation.avg}</span>
-            <span className="text-xs text-muted-foreground">({reputation.count} reviews · {reputation.onTimeRate}% on-time)</span>
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          {completedCount > 0 && (
+            <Button variant="outline" size="sm" className="text-xs tap-highlight" onClick={() => {
+              const completed = myTasks.filter(t => t.status === "completed");
+              const csv = ["Title,Subject,Budget,Date", ...completed.map(t => `"${t.title}","${t.subject || ""}","${t.budget || 0}","${t.reviewed_at || t.updated_at}"`)].join("\n");
+              const blob = new Blob([csv], { type: "text/csv" });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a"); a.href = url; a.download = "my-earnings.csv"; a.click(); URL.revokeObjectURL(url);
+            }}>
+              <FileDown className="mr-1.5 h-3.5 w-3.5" /> Export
+            </Button>
+          )}
+          {reputation.count > 0 && (
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[hsl(var(--warn))]/10 border border-[hsl(var(--warn))]/20">
+              <Star className="h-4 w-4 text-[hsl(var(--warn))] fill-[hsl(var(--warn))]" />
+              <span className="text-sm font-semibold">{reputation.avg}</span>
+              <span className="text-xs text-muted-foreground">({reputation.count} reviews · {reputation.onTimeRate}% on-time)</span>
+            </div>
+          )}
+        </div>
       </div>
 
       <StaggerGrid className="grid grid-cols-2 md:grid-cols-4 gap-3">
