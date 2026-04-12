@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import confetti from "canvas-confetti";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,6 +29,7 @@ import AssignmentChat from "@/components/AssignmentChat";
 import { PageTransition, StaggerGrid, StaggerItem } from "@/components/MotionWrappers";
 import { StatsSkeleton, CardListSkeleton } from "@/components/DashboardSkeleton";
 import useUnsavedChangesWarning from "@/hooks/useUnsavedChangesWarning";
+import useKeyboardShortcuts from "@/hooks/useKeyboardShortcuts";
 
 const SLA_OPTIONS = [
   { value: "standard", label: "Standard (48h)", fee: 0 },
@@ -46,6 +48,7 @@ interface AgentInfo {
   avgRating: number;
   reviewCount: number;
   onTimeRate: number;
+  lastActiveAt: string | null;
 }
 
 const StudentDashboard = () => {
@@ -71,6 +74,12 @@ const StudentDashboard = () => {
   // Warn if navigating away with unsaved form data
   const formIsDirty = showNew && (form.title.trim().length > 0 || form.description.trim().length > 0);
   useUnsavedChangesWarning(formIsDirty);
+
+  // Keyboard shortcuts: n = new assignment, Escape = close detail/form
+  useKeyboardShortcuts(useCallback(() => ({
+    "n": () => { if (!showNew && !selectedId) setShowNew(true); },
+    "Escape": () => { if (selectedId) setSelectedId(null); else if (showNew) setShowNew(false); },
+  }), [showNew, selectedId])());
 
   useEffect(() => {
     if (user) { fetchAssignments(); checkAgentRequest(); fetchAgents(); fetchMyReviews(); }
@@ -134,6 +143,7 @@ const StudentDashboard = () => {
           avgRating: Math.round(avgRating * 10) / 10,
           reviewCount: ar.length,
           onTimeRate: Math.round(onTimeRate),
+          lastActiveAt: p.last_active_at,
         };
       });
       setAgents(agentList);
@@ -286,6 +296,14 @@ const StudentDashboard = () => {
     const sl = statusLabel(assignment);
     const agentProfile = agents.find(a => a.user_id === assignment.agent_id);
     const hasReviewed = reviews.includes(assignment.id);
+
+    // Confetti on completed assignments
+    if (assignment.admin_released) {
+      setTimeout(() => {
+        confetti({ particleCount: 80, spread: 60, origin: { y: 0.7 } });
+      }, 300);
+    }
+
     return (
       <div className="max-w-3xl mx-auto space-y-4 page-enter">
         <Button variant="ghost" size="sm" onClick={() => setSelectedId(null)} className="mb-2 tap-highlight">← Back</Button>
@@ -385,7 +403,7 @@ const StudentDashboard = () => {
               </Card>
             )}
             {assignment.payment_status === "paid" && !assignment.admin_released && (
-              <div className="text-sm text-info flex items-center gap-2 bg-info/5 px-3 py-2 rounded-lg">
+              <div className="text-sm text-[hsl(var(--info))] flex items-center gap-2 bg-[hsl(var(--info))]/5 px-3 py-2 rounded-lg">
                 <Clock className="h-4 w-4" /> Payment proof submitted. Waiting for admin to release.
               </div>
             )}
@@ -547,16 +565,21 @@ const StudentDashboard = () => {
                 <div className="md:col-span-2">
                   <Label className="text-xs mb-2 block">Recommended Agents</Label>
                   <div className="flex gap-3 overflow-x-auto pb-2">
-                    {agents.sort((a, b) => b.avgRating - a.avgRating).slice(0, 4).map(agent => (
+                    {agents.sort((a, b) => b.avgRating - a.avgRating).slice(0, 4).map(agent => {
+                      const isOnline = agent.lastActiveAt && (Date.now() - new Date(agent.lastActiveAt).getTime()) < 300_000;
+                      return (
                       <button key={agent.user_id} type="button"
                         onClick={() => setForm({ ...form, selected_agent: agent.user_id })}
                         className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all shrink-0 tap-highlight ${
                           form.selected_agent === agent.user_id ? "border-primary bg-primary/10" : "border-border hover:border-primary/30"
                         }`}>
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={agent.avatar_url || undefined} />
-                          <AvatarFallback className="bg-primary/10 text-primary text-[10px]">{(agent.full_name || "A").slice(0, 2).toUpperCase()}</AvatarFallback>
-                        </Avatar>
+                        <div className="relative">
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={agent.avatar_url || undefined} />
+                            <AvatarFallback className="bg-primary/10 text-primary text-[10px]">{(agent.full_name || "A").slice(0, 2).toUpperCase()}</AvatarFallback>
+                          </Avatar>
+                          {isOnline && <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-[hsl(var(--success))] border-2 border-background rounded-full" />}
+                        </div>
                         <div className="text-left">
                           <p className="text-xs font-medium">{agent.full_name || "Agent"}</p>
                           <div className="flex items-center gap-1">
@@ -571,7 +594,8 @@ const StudentDashboard = () => {
                           </div>
                         </div>
                       </button>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -610,10 +634,15 @@ const StudentDashboard = () => {
                 <CardContent className="p-4 flex items-center justify-between">
                   <div className="flex items-center gap-3 min-w-0">
                     {agentProfile && (
-                      <Avatar className="h-8 w-8 shrink-0 hidden sm:flex">
-                        <AvatarImage src={agentProfile.avatar_url || undefined} />
-                        <AvatarFallback className="bg-primary/10 text-primary text-[10px]">{(agentProfile.full_name || "A").slice(0, 2).toUpperCase()}</AvatarFallback>
-                      </Avatar>
+                      <div className="relative">
+                        <Avatar className="h-8 w-8 shrink-0 hidden sm:flex">
+                          <AvatarImage src={agentProfile.avatar_url || undefined} />
+                          <AvatarFallback className="bg-primary/10 text-primary text-[10px]">{(agentProfile.full_name || "A").slice(0, 2).toUpperCase()}</AvatarFallback>
+                        </Avatar>
+                        {agentProfile.lastActiveAt && (Date.now() - new Date(agentProfile.lastActiveAt).getTime()) < 300_000 && (
+                          <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-[hsl(var(--success))] border-2 border-background rounded-full hidden sm:block" />
+                        )}
+                      </div>
                     )}
                     <div className="min-w-0">
                       <p className="font-medium truncate">{a.title}</p>

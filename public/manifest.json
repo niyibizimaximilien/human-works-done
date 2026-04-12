@@ -1,0 +1,21 @@
+{
+  "name": "MR. Assignment",
+  "short_name": "MR. Assignment",
+  "description": "Get your assignments done by vetted agents. Post, pay, and receive — all in one place.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#121620",
+  "theme_color": "#2563EB",
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
