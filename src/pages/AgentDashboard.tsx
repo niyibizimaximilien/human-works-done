@@ -14,6 +14,8 @@ import StatusTimeline from "@/components/StatusTimeline";
 import DeadlineCountdown from "@/components/DeadlineCountdown";
 import EmptyState from "@/components/EmptyState";
 import AssignmentChat from "@/components/AssignmentChat";
+import { relativeTime } from "@/lib/relativeTime";
+import { PageTransition, StaggerGrid, StaggerItem } from "@/components/MotionWrappers";
 import { StatsSkeleton, CardListSkeleton } from "@/components/DashboardSkeleton";
 import ConfirmDialog from "@/components/ui/alert-dialog-confirm";
 
@@ -207,10 +209,10 @@ const AgentDashboard = () => {
   const activeCount = myTasks.filter(t => ["in_progress", "submitted"].includes(t.status)).length;
 
   const stats = [
-    { label: "Received", value: myTasks.length, icon: Briefcase, color: "text-primary" },
-    { label: "Active", value: activeCount, icon: Clock, color: "text-warn" },
-    { label: "Completed", value: completedCount, icon: CheckCircle, color: "text-primary" },
-    { label: "Earnings", value: formatRWF(totalEarnings), icon: TrendingUp, color: "text-primary" },
+    { label: "Received", value: myTasks.length, icon: Briefcase, color: "text-primary", bg: "bg-primary/10" },
+    { label: "Active", value: activeCount, icon: Clock, color: "text-[hsl(var(--warn))]", bg: "bg-[hsl(var(--warn))]/10" },
+    { label: "Completed", value: completedCount, icon: CheckCircle, color: "text-[hsl(var(--success))]", bg: "bg-[hsl(var(--success))]/10" },
+    { label: "Earnings", value: formatRWF(totalEarnings), icon: TrendingUp, color: "text-[hsl(var(--info))]", bg: "bg-[hsl(var(--info))]/10" },
   ];
 
   return (
@@ -229,21 +231,23 @@ const AgentDashboard = () => {
         )}
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <StaggerGrid className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {stats.map((s, i) => (
-          <Card key={i} className="border-border animate-fade-in" style={{ boxShadow: "var(--card-shadow)", animationDelay: `${i * 80}ms` }}>
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                <s.icon className={`h-5 w-5 ${s.color}`} />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xl md:text-2xl font-bold font-heading truncate">{s.value}</p>
-                <p className="text-xs text-muted-foreground">{s.label}</p>
-              </div>
-            </CardContent>
-          </Card>
+          <StaggerItem key={i}>
+            <Card className="border-border" style={{ boxShadow: "var(--card-shadow)" }}>
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-xl ${s.bg} flex items-center justify-center shrink-0`}>
+                  <s.icon className={`h-5 w-5 ${s.color}`} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xl md:text-2xl font-bold font-heading truncate">{s.value}</p>
+                  <p className="text-xs text-muted-foreground">{s.label}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </StaggerItem>
         ))}
-      </div>
+      </StaggerGrid>
 
       <div className="space-y-3">
         {myTasks.length === 0 ? (
