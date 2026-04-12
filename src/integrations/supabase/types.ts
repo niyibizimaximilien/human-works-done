@@ -232,6 +232,7 @@ export type Database = {
           department: string | null
           full_name: string | null
           id: string
+          last_active_at: string | null
           level: string | null
           onboarding_completed: boolean
           phone: string | null
@@ -246,6 +247,7 @@ export type Database = {
           department?: string | null
           full_name?: string | null
           id?: string
+          last_active_at?: string | null
           level?: string | null
           onboarding_completed?: boolean
           phone?: string | null
@@ -260,6 +262,7 @@ export type Database = {
           department?: string | null
           full_name?: string | null
           id?: string
+          last_active_at?: string | null
           level?: string | null
           onboarding_completed?: boolean
           phone?: string | null
