@@ -475,6 +475,15 @@ const AdminDashboard = () => {
                   return (
                     <div key={req.id} className="flex items-center justify-between py-3 px-3 border border-border/50 rounded-lg">
                       <div className="flex items-center gap-3">
+                        {!hasAgentRole && (
+                          <input type="checkbox" className="h-4 w-4 rounded accent-primary" checked={selectedRequests.has(req.entity_id || req.user_id)}
+                            onChange={(e) => {
+                              const id = req.entity_id || req.user_id;
+                              const next = new Set(selectedRequests);
+                              e.target.checked ? next.add(id) : next.delete(id);
+                              setSelectedRequests(next);
+                            }} />
+                        )}
                         <Avatar className="h-9 w-9">
                           <AvatarImage src={prof?.avatar_url || undefined} />
                           <AvatarFallback className="bg-primary/10 text-primary text-xs">{(prof?.full_name || "U").slice(0, 2).toUpperCase()}</AvatarFallback>
