@@ -570,7 +570,7 @@ const AdminDashboard = () => {
                 <div key={log.id} className="flex items-center justify-between py-2 border-b border-border/50 last:border-0">
                   <div>
                     <p className="text-sm font-medium capitalize">{log.action.replace(/_/g, " ")}</p>
-                    <p className="text-xs text-muted-foreground">{profiles[log.user_id]?.full_name || "System"} · {new Date(log.created_at).toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground">{profiles[log.user_id]?.full_name || "System"} · {relativeTime(log.created_at)}</p>
                   </div>
                   <Badge variant="outline" className="text-[10px]">{log.entity_type}</Badge>
                 </div>
