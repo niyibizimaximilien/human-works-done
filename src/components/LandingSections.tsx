@@ -108,8 +108,8 @@ const WhatYouGetSection = () => {
             {forStudents.map((f, i) => (
               <Card key={i} className="border-border bg-card card-hover animate-fade-in" style={{ boxShadow: "var(--card-shadow)", animationDelay: `${i * 100}ms` }}>
                 <CardContent className="p-5">
-                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mb-3">
-                    <f.icon className="h-5 w-5 text-primary" />
+                  <div className={`w-10 h-10 rounded-xl ${f.iconBg} flex items-center justify-center mb-3`}>
+                    <f.icon className={`h-5 w-5 ${f.iconColor}`} />
                   </div>
                   <h3 className="font-heading font-semibold mb-1">{f.title}</h3>
                   <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
@@ -129,8 +129,8 @@ const WhatYouGetSection = () => {
             {forAgents.map((f, i) => (
               <Card key={i} className="border-border bg-card card-hover animate-fade-in" style={{ boxShadow: "var(--card-shadow)", animationDelay: `${i * 100}ms` }}>
                 <CardContent className="p-5">
-                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mb-3">
-                    <f.icon className="h-5 w-5 text-primary" />
+                  <div className={`w-10 h-10 rounded-xl ${f.iconBg} flex items-center justify-center mb-3`}>
+                    <f.icon className={`h-5 w-5 ${f.iconColor}`} />
                   </div>
                   <h3 className="font-heading font-semibold mb-1">{f.title}</h3>
                   <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
