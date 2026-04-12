@@ -10,6 +10,11 @@ import {
   Briefcase, Clock, CheckCircle, FileText, Zap, TrendingUp,
   Eye, Star, Loader2, Upload, Download, Send, ArrowLeft
 } from "lucide-react";
+import StatusTimeline from "@/components/StatusTimeline";
+import DeadlineCountdown from "@/components/DeadlineCountdown";
+import EmptyState from "@/components/EmptyState";
+import { StatsSkeleton, CardListSkeleton } from "@/components/DashboardSkeleton";
+import ConfirmDialog from "@/components/ui/alert-dialog-confirm";
 
 const AgentDashboard = () => {
   const { user } = useAuth();
@@ -23,13 +28,12 @@ const AgentDashboard = () => {
     if (user) { fetchMyTasks(); fetchReputation(); }
   }, [user]);
 
-  // Real-time
   useEffect(() => {
     if (!user) return;
     const channel = supabase
       .channel("agent-tasks")
       .on("postgres_changes", { event: "*", schema: "public", table: "assignments", filter: `agent_id=eq.${user.id}` },
-        () => { fetchMyTasks(); playSound(); }
+        () => { fetchMyTasks(); toast({ title: "📋 Task updated" }); playSound(); }
       )
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` },
         () => { playSound(); }
@@ -74,9 +78,7 @@ const AgentDashboard = () => {
     if (error) {
       toast({ title: "Upload failed", description: error.message, variant: "destructive" });
     } else {
-      await supabase.from("assignments").update({
-        deliverable_url: path,
-      } as any).eq("id", assignmentId);
+      await supabase.from("assignments").update({ deliverable_url: path } as any).eq("id", assignmentId);
       toast({ title: "Deliverable uploaded!" });
       fetchMyTasks();
     }
@@ -85,26 +87,16 @@ const AgentDashboard = () => {
 
   const submitToAdmin = async (assignmentId: string) => {
     const { error } = await supabase.from("assignments").update({
-      status: "submitted",
-      submitted_at: new Date().toISOString(),
+      status: "submitted", submitted_at: new Date().toISOString(),
     }).eq("id", assignmentId);
-    if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-      return;
-    }
-    // Notify admins
+    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
     const { data: adminRoles } = await supabase.from("user_roles").select("user_id").eq("role", "admin");
     if (adminRoles) {
       for (const ar of adminRoles) {
-        await supabase.from("notifications").insert({
-          user_id: ar.user_id,
-          title: "Assignment Submitted for Review 📋",
-          message: `An agent submitted completed work for review.`,
-          link: "/dashboard",
-        });
+        await supabase.from("notifications").insert({ user_id: ar.user_id, title: "Assignment Submitted 📋", message: `Agent submitted work for review.`, link: "/dashboard" });
       }
     }
-    toast({ title: "Submitted to admin for review!" });
+    toast({ title: "Submitted to admin!" });
     fetchMyTasks();
   };
 
@@ -118,7 +110,7 @@ const AgentDashboard = () => {
   };
 
   if (fetching) {
-    return <div className="flex items-center justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
+    return <div className="max-w-5xl mx-auto space-y-6"><StatsSkeleton /><CardListSkeleton /></div>;
   }
 
   if (selectedId) {
@@ -126,7 +118,7 @@ const AgentDashboard = () => {
     if (!task) { setSelectedId(null); return null; }
     return (
       <div className="max-w-3xl mx-auto space-y-4 page-enter">
-        <Button variant="ghost" size="sm" onClick={() => setSelectedId(null)}>
+        <Button variant="ghost" size="sm" onClick={() => setSelectedId(null)} className="tap-highlight">
           <ArrowLeft className="mr-2 h-4 w-4" /> Back to Tasks
         </Button>
         <Card className="border-border" style={{ boxShadow: "var(--card-shadow)" }}>
@@ -139,33 +131,38 @@ const AgentDashboard = () => {
               </div>
               <Badge variant="outline" className="capitalize">{task.status.replace(/_/g, " ")}</Badge>
             </div>
+
+            <StatusTimeline assignment={task} />
+
             <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-              <span><Clock className="inline h-3.5 w-3.5 mr-1" />Due: {new Date(task.deadline).toLocaleString()}</span>
+              <DeadlineCountdown deadline={task.deadline} />
               {task.budget && <span className="text-primary font-semibold">{formatRWF(task.budget)}</span>}
             </div>
 
             <div className="flex flex-wrap gap-2 pt-3 border-t border-border">
-              {/* Download assignment brief */}
               {task.file_url && (
-                <Button variant="outline" size="sm" onClick={() => downloadFile("assignment-files", task.file_url)}>
+                <Button variant="outline" size="sm" onClick={() => downloadFile("assignment-files", task.file_url)} className="tap-highlight">
                   <Download className="mr-1.5 h-4 w-4" /> Assignment Brief
                 </Button>
               )}
 
-              {/* Upload deliverable */}
               {task.status === "in_progress" && (
                 <>
                   <label className="cursor-pointer">
                     <input type="file" className="hidden" onChange={(e) => handleDeliverableUpload(task.id, e)} disabled={uploading}
                       accept=".pdf,.doc,.docx,.txt,.ppt,.pptx,.xls,.xlsx,.jpg,.jpeg,.png,.gif,.zip,.rar" />
-                    <Button variant="outline" size="sm" asChild disabled={uploading}>
+                    <Button variant="outline" size="sm" asChild disabled={uploading} className="tap-highlight">
                       <span><Upload className="mr-1.5 h-4 w-4" /> {uploading ? "Uploading..." : "Upload Answer"}</span>
                     </Button>
                   </label>
                   {task.deliverable_url && (
-                    <Button size="sm" className="gold-glow" onClick={() => submitToAdmin(task.id)}>
-                      <Send className="mr-1.5 h-4 w-4" /> Submit to Admin
-                    </Button>
+                    <ConfirmDialog
+                      trigger={<Button size="sm" className="gold-glow tap-highlight"><Send className="mr-1.5 h-4 w-4" /> Submit to Admin</Button>}
+                      title="Submit to Admin?"
+                      description="This will send your completed work to the admin for review. Make sure you've uploaded the correct deliverable."
+                      onConfirm={() => submitToAdmin(task.id)}
+                      confirmText="Yes, Submit"
+                    />
                   )}
                 </>
               )}
@@ -232,13 +229,7 @@ const AgentDashboard = () => {
 
       <div className="space-y-3">
         {myTasks.length === 0 ? (
-          <Card className="border-border" style={{ boxShadow: "var(--card-shadow)" }}>
-            <CardContent className="py-12 text-center">
-              <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="font-heading font-semibold mb-1">No tasks yet</h3>
-              <p className="text-sm text-muted-foreground">You'll receive assignments from students here.</p>
-            </CardContent>
-          </Card>
+          <EmptyState icon={FileText} title="No tasks yet" description="You'll receive assignments from students here." />
         ) : (
           myTasks.map((t, i) => (
             <Card key={t.id} className="border-border card-hover cursor-pointer animate-fade-in"
@@ -248,22 +239,18 @@ const AgentDashboard = () => {
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0 flex-1">
                     <p className="font-medium">{t.title}</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {t.subject && `${t.subject} · `}Due {new Date(t.deadline).toLocaleDateString()}
-                    </p>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                      {t.subject && <span>{t.subject}</span>}
+                      <DeadlineCountdown deadline={t.deadline} />
+                    </div>
                   </div>
                   <div className="flex flex-col items-end gap-2 shrink-0">
                     {t.budget && <span className="text-sm font-semibold text-primary">{formatRWF(t.budget)}</span>}
-                    <div className="flex items-center gap-2">
-                      <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                        t.status === "in_progress" ? "bg-warn/10 text-warn" :
-                        t.status === "submitted" ? "bg-info/10 text-info" :
-                        "bg-primary/10 text-primary"
-                      }`}>
-                        {t.status.replace(/_/g, " ")}
-                      </span>
-                      <Eye className="h-4 w-4 text-muted-foreground" />
-                    </div>
+                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                      t.status === "in_progress" ? "bg-warn/10 text-warn" :
+                      t.status === "submitted" ? "bg-info/10 text-info" :
+                      "bg-primary/10 text-primary"
+                    }`}>{t.status.replace(/_/g, " ")}</span>
                   </div>
                 </div>
               </CardContent>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -14,14 +14,22 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Upload, Clock, CheckCircle, FileText, Plus,
   BookOpen, X, Eye, Zap, Briefcase, Loader2,
-  Star, CreditCard, Download, ArrowRight, Send, AlertTriangle
+  Star, CreditCard, Download, ArrowRight, Send, AlertTriangle, Search
 } from "lucide-react";
+import StatusTimeline from "@/components/StatusTimeline";
+import DeadlineCountdown from "@/components/DeadlineCountdown";
+import ReviewDialog from "@/components/ReviewDialog";
+import AgentProfileDialog from "@/components/AgentProfileDialog";
+import EmptyState from "@/components/EmptyState";
+import { StatsSkeleton, CardListSkeleton } from "@/components/DashboardSkeleton";
 
 const SLA_OPTIONS = [
   { value: "standard", label: "Standard (48h)", fee: 0 },
   { value: "priority", label: "Priority (12h)", fee: 500 },
   { value: "express", label: "Express (4h)", fee: 1500 },
 ];
+
+const PAGE_SIZE = 10;
 
 const StudentDashboard = () => {
   const { user, role } = useAuth();
@@ -34,22 +42,25 @@ const StudentDashboard = () => {
   const [agentRequested, setAgentRequested] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [uploadingProof, setUploadingProof] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(0);
+  const [briefFile, setBriefFile] = useState<File | null>(null);
+  const [reviews, setReviews] = useState<string[]>([]);
   const [form, setForm] = useState({
     title: "", description: "", subject: "", deadline: "", budget: "",
     sla_tier: "standard", selected_agent: "",
   });
 
   useEffect(() => {
-    if (user) { fetchAssignments(); checkAgentRequest(); fetchAgents(); }
+    if (user) { fetchAssignments(); checkAgentRequest(); fetchAgents(); fetchMyReviews(); }
   }, [user]);
 
-  // Real-time assignment updates
   useEffect(() => {
     if (!user) return;
     const channel = supabase
       .channel("student-assignments")
       .on("postgres_changes", { event: "*", schema: "public", table: "assignments", filter: `student_id=eq.${user.id}` },
-        () => { fetchAssignments(); playNotificationSound(); }
+        () => { fetchAssignments(); toast({ title: "📋 Assignment updated", description: "An assignment status changed." }); }
       )
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` },
         () => { playNotificationSound(); }
@@ -63,41 +74,38 @@ const StudentDashboard = () => {
       const ctx = new AudioContext();
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.frequency.value = 800;
-      gain.gain.value = 0.1;
-      osc.start();
-      osc.stop(ctx.currentTime + 0.15);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.frequency.value = 800; gain.gain.value = 0.1;
+      osc.start(); osc.stop(ctx.currentTime + 0.15);
     } catch {}
   };
 
   const fetchAssignments = async () => {
-    const { data } = await supabase
-      .from("assignments")
-      .select("*")
-      .eq("student_id", user!.id)
-      .order("created_at", { ascending: false });
+    const { data } = await supabase.from("assignments").select("*")
+      .eq("student_id", user!.id).order("created_at", { ascending: false });
     setAssignments(data || []);
     setFetching(false);
   };
 
   const fetchAgents = async () => {
-    // Fetch users with agent role
     const { data: agentRoles } = await supabase.from("user_roles").select("user_id").eq("role", "agent");
     if (agentRoles && agentRoles.length > 0) {
       const ids = agentRoles.map(r => r.user_id);
       const { data: profiles } = await supabase.from("profiles").select("*").in("user_id", ids);
-      // Fetch reviews for rating
-      const { data: reviews } = await supabase.from("agent_reviews").select("agent_id, rating, on_time");
+      const { data: reviewsData } = await supabase.from("agent_reviews").select("agent_id, rating, on_time");
       const agentList = (profiles || []).map(p => {
-        const agentReviews = (reviews || []).filter(r => r.agent_id === p.user_id);
-        const avgRating = agentReviews.length > 0 ? agentReviews.reduce((s, r) => s + r.rating, 0) / agentReviews.length : 0;
-        const onTimeRate = agentReviews.length > 0 ? (agentReviews.filter(r => r.on_time).length / agentReviews.length) * 100 : 0;
-        return { ...p, avgRating: Math.round(avgRating * 10) / 10, reviewCount: agentReviews.length, onTimeRate: Math.round(onTimeRate) };
+        const ar = (reviewsData || []).filter(r => r.agent_id === p.user_id);
+        const avgRating = ar.length > 0 ? ar.reduce((s, r) => s + r.rating, 0) / ar.length : 0;
+        const onTimeRate = ar.length > 0 ? (ar.filter(r => r.on_time).length / ar.length) * 100 : 0;
+        return { ...p, avgRating: Math.round(avgRating * 10) / 10, reviewCount: ar.length, onTimeRate: Math.round(onTimeRate) };
       });
       setAgents(agentList);
     }
+  };
+
+  const fetchMyReviews = async () => {
+    const { data } = await supabase.from("agent_reviews").select("assignment_id").eq("student_id", user!.id);
+    setReviews((data || []).map(r => r.assignment_id));
   };
 
   const checkAgentRequest = async () => {
@@ -124,7 +132,7 @@ const StudentDashboard = () => {
     setLoading(true);
     const slaFee = SLA_OPTIONS.find(s => s.value === form.sla_tier)?.fee || 0;
     try {
-      const { error } = await supabase.from("assignments").insert({
+      const { data: newAssignment, error } = await supabase.from("assignments").insert({
         student_id: user!.id,
         agent_id: form.selected_agent,
         title: form.title,
@@ -135,9 +143,18 @@ const StudentDashboard = () => {
         sla_tier: form.sla_tier,
         priority_fee: slaFee,
         status: "in_progress",
-      });
+      }).select().single();
       if (error) throw error;
-      // Notify the agent
+
+      // Upload brief file if attached
+      if (briefFile && newAssignment) {
+        const path = `${newAssignment.id}/${Date.now()}-${briefFile.name}`;
+        const { error: uploadError } = await supabase.storage.from("assignment-files").upload(path, briefFile);
+        if (!uploadError) {
+          await supabase.from("assignments").update({ file_url: path } as any).eq("id", newAssignment.id);
+        }
+      }
+
       await supabase.from("notifications").insert({
         user_id: form.selected_agent,
         title: "New Assignment Received 📄",
@@ -147,6 +164,7 @@ const StudentDashboard = () => {
       toast({ title: "Assignment sent!", description: "The agent has been notified." });
       setShowNew(false);
       setForm({ title: "", description: "", subject: "", deadline: "", budget: "", sla_tier: "standard", selected_agent: "" });
+      setBriefFile(null);
       fetchAssignments();
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
@@ -181,23 +199,14 @@ const StudentDashboard = () => {
       toast({ title: "Upload failed", description: error.message, variant: "destructive" });
     } else {
       const { data: { publicUrl } } = supabase.storage.from("assignment-files").getPublicUrl(path);
-      await supabase.from("assignments").update({
-        payment_proof_url: publicUrl,
-        payment_status: "paid",
-      } as any).eq("id", assignmentId);
-      // Notify admin
+      await supabase.from("assignments").update({ payment_proof_url: publicUrl, payment_status: "paid" } as any).eq("id", assignmentId);
       const { data: adminRoles } = await supabase.from("user_roles").select("user_id").eq("role", "admin");
       if (adminRoles) {
         for (const ar of adminRoles) {
-          await supabase.from("notifications").insert({
-            user_id: ar.user_id,
-            title: "Payment Proof Uploaded 💰",
-            message: `Student uploaded payment proof for an assignment.`,
-            link: "/dashboard",
-          });
+          await supabase.from("notifications").insert({ user_id: ar.user_id, title: "Payment Proof Uploaded 💰", message: `Student uploaded payment proof.`, link: "/dashboard" });
         }
       }
-      toast({ title: "Payment proof uploaded!", description: "Admin will review and release your results." });
+      toast({ title: "Payment proof uploaded!" });
       fetchAssignments();
     }
     setUploadingProof(false);
@@ -222,19 +231,26 @@ const StudentDashboard = () => {
     return { text: a.status.replace(/_/g, " "), cls: "bg-muted text-muted-foreground" };
   };
 
+  const filteredAssignments = assignments.filter(a =>
+    !searchQuery || a.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (a.subject || "").toLowerCase().includes(searchQuery.toLowerCase())
+  );
+  const paginatedAssignments = filteredAssignments.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const totalPages = Math.ceil(filteredAssignments.length / PAGE_SIZE);
+
   if (fetching) {
-    return <div className="flex items-center justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
+    return <div className="max-w-5xl mx-auto space-y-6"><StatsSkeleton /><CardListSkeleton /></div>;
   }
 
   if (selectedId) {
     const assignment = assignments.find(a => a.id === selectedId);
     if (!assignment) { setSelectedId(null); return null; }
     const sl = statusLabel(assignment);
+    const agentProfile = agents.find(a => a.user_id === assignment.agent_id);
+    const hasReviewed = reviews.includes(assignment.id);
     return (
       <div className="max-w-3xl mx-auto space-y-4 page-enter">
-        <Button variant="ghost" size="sm" onClick={() => setSelectedId(null)} className="mb-2">
-          ← Back to Assignments
-        </Button>
+        <Button variant="ghost" size="sm" onClick={() => setSelectedId(null)} className="mb-2 tap-highlight">← Back</Button>
         <Card className="border-border" style={{ boxShadow: "var(--card-shadow)" }}>
           <CardContent className="p-5 space-y-4">
             <div className="flex justify-between items-start">
@@ -245,41 +261,68 @@ const StudentDashboard = () => {
               </div>
               <Badge className={sl.cls}>{sl.text}</Badge>
             </div>
+
+            {/* Agent info */}
+            {agentProfile && (
+              <AgentProfileDialog agentUserId={agentProfile.user_id}>
+                <button className="flex items-center gap-2 p-2 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors w-full text-left tap-highlight">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={agentProfile.avatar_url || undefined} />
+                    <AvatarFallback className="bg-primary/10 text-primary text-[10px]">{(agentProfile.full_name || "A").slice(0, 2).toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium">{agentProfile.full_name || "Agent"}</p>
+                    <p className="text-[10px] text-muted-foreground">Tap to view profile</p>
+                  </div>
+                </button>
+              </AgentProfileDialog>
+            )}
+
+            {/* Status Timeline */}
+            <StatusTimeline assignment={assignment} />
+
             <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-              <span><Clock className="inline h-3.5 w-3.5 mr-1" />Due: {new Date(assignment.deadline).toLocaleString()}</span>
+              <DeadlineCountdown deadline={assignment.deadline} />
               {assignment.budget && <span className="text-primary font-semibold">{formatRWF(assignment.budget)}</span>}
               {assignment.sla_tier !== "standard" && <Badge variant="outline" className="uppercase text-[10px]">{assignment.sla_tier}</Badge>}
             </div>
+
             {assignment.transferred_from && (
               <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 px-3 py-2 rounded-lg">
                 <AlertTriangle className="h-3.5 w-3.5" />
-                This assignment was transferred to a new agent.
+                This assignment was transferred.
                 {assignment.transfer_reason && <span>Reason: {assignment.transfer_reason}</span>}
               </div>
             )}
 
-            {/* File Actions */}
             <div className="flex flex-wrap gap-2 pt-2 border-t border-border">
-              {/* Attach additional documents */}
               <label className="cursor-pointer">
                 <input type="file" className="hidden" onChange={(e) => handleFileUpload(assignment.id, e)} disabled={uploadingFile}
                   accept=".pdf,.doc,.docx,.txt,.ppt,.pptx,.xls,.xlsx,.jpg,.jpeg,.png,.gif,.zip,.rar" />
-                <Button variant="outline" size="sm" asChild disabled={uploadingFile}>
-                  <span><Upload className="mr-1.5 h-4 w-4" /> {uploadingFile ? "Uploading..." : "Attach Document"}</span>
+                <Button variant="outline" size="sm" asChild disabled={uploadingFile} className="tap-highlight">
+                  <span><Upload className="mr-1.5 h-4 w-4" /> {uploadingFile ? "Uploading..." : "Attach Doc"}</span>
                 </Button>
               </label>
               {assignment.file_url && (
-                <Button variant="outline" size="sm" onClick={() => downloadFile("assignment-files", assignment.file_url)}>
+                <Button variant="outline" size="sm" onClick={() => downloadFile("assignment-files", assignment.file_url)} className="tap-highlight">
                   <Download className="mr-1.5 h-4 w-4" /> View Brief
                 </Button>
               )}
-              {/* Deliverable only visible if admin released */}
               {assignment.admin_released && assignment.deliverable_url && (
-                <Button variant="default" size="sm" className="gold-glow" onClick={() => downloadFile("deliverables", assignment.deliverable_url)}>
+                <Button variant="default" size="sm" className="gold-glow tap-highlight" onClick={() => downloadFile("deliverables", assignment.deliverable_url)}>
                   <Download className="mr-1.5 h-4 w-4" /> Download Results
                 </Button>
               )}
             </div>
+
+            {/* Review button */}
+            {assignment.admin_released && !hasReviewed && assignment.agent_id && (
+              <ReviewDialog assignmentId={assignment.id} agentId={assignment.agent_id} studentId={user!.id} onReviewSubmitted={() => { fetchMyReviews(); fetchAgents(); }}>
+                <Button variant="outline" size="sm" className="w-full tap-highlight">
+                  <Star className="mr-2 h-4 w-4" /> Rate this Agent
+                </Button>
+              </ReviewDialog>
+            )}
 
             {/* Payment section */}
             {assignment.payment_status === "pending_payment" && !assignment.admin_released && (
@@ -289,12 +332,11 @@ const StudentDashboard = () => {
                     <CreditCard className="h-5 w-5 text-primary" />
                     <h4 className="font-heading font-semibold">Payment Required</h4>
                   </div>
-                  <p className="text-sm text-muted-foreground">Your work is complete! Upload payment proof to receive your results.</p>
+                  <p className="text-sm text-muted-foreground">Your work is complete! Upload payment proof to receive results.</p>
                   <p className="text-lg font-bold text-primary">{formatRWF(assignment.budget)}</p>
                   <label className="cursor-pointer">
-                    <input type="file" className="hidden" onChange={(e) => handlePaymentProof(assignment.id, e)} disabled={uploadingProof}
-                      accept=".pdf,.jpg,.jpeg,.png,.gif" />
-                    <Button size="sm" className="gold-glow" asChild disabled={uploadingProof}>
+                    <input type="file" className="hidden" onChange={(e) => handlePaymentProof(assignment.id, e)} disabled={uploadingProof} accept=".pdf,.jpg,.jpeg,.png,.gif" />
+                    <Button size="sm" className="gold-glow tap-highlight" asChild disabled={uploadingProof}>
                       <span><Upload className="mr-1.5 h-4 w-4" /> {uploadingProof ? "Uploading..." : "Upload Payment Proof"}</span>
                     </Button>
                   </label>
@@ -303,7 +345,7 @@ const StudentDashboard = () => {
             )}
             {assignment.payment_status === "paid" && !assignment.admin_released && (
               <div className="text-sm text-info flex items-center gap-2 bg-info/5 px-3 py-2 rounded-lg">
-                <Clock className="h-4 w-4" /> Payment proof submitted. Waiting for admin to release your results.
+                <Clock className="h-4 w-4" /> Payment proof submitted. Waiting for admin to release.
               </div>
             )}
           </CardContent>
@@ -315,7 +357,7 @@ const StudentDashboard = () => {
   const stats = [
     { label: "Total", value: assignments.length, icon: BookOpen, color: "text-primary" },
     { label: "In Progress", value: assignments.filter(a => a.status === "in_progress").length, icon: Clock, color: "text-warn" },
-    { label: "Awaiting Payment", value: assignments.filter(a => a.payment_status === "pending_payment").length, icon: CreditCard, color: "text-info" },
+    { label: "Awaiting Pay", value: assignments.filter(a => a.payment_status === "pending_payment").length, icon: CreditCard, color: "text-info" },
     { label: "Completed", value: assignments.filter(a => a.admin_released).length, icon: CheckCircle, color: "text-primary" },
   ];
 
@@ -328,7 +370,7 @@ const StudentDashboard = () => {
         </div>
         <div className="flex gap-2">
           {role === "student" && !agentRequested && (
-            <Button variant="outline" size="sm" onClick={requestAgentRole} className="text-xs">
+            <Button variant="outline" size="sm" onClick={requestAgentRole} className="text-xs tap-highlight">
               <Briefcase className="mr-1.5 h-3.5 w-3.5" /> Become an Agent
             </Button>
           )}
@@ -337,13 +379,12 @@ const StudentDashboard = () => {
               <Clock className="mr-1.5 h-3.5 w-3.5" /> Agent Request Pending
             </Button>
           )}
-          <Button onClick={() => setShowNew(true)} className="gold-glow">
+          <Button onClick={() => setShowNew(true)} className="gold-glow tap-highlight">
             <Plus className="mr-2 h-4 w-4" /> New Assignment
           </Button>
         </div>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {stats.map((s, i) => (
           <Card key={i} className="border-border animate-fade-in" style={{ boxShadow: "var(--card-shadow)", animationDelay: `${i * 80}ms` }}>
@@ -381,6 +422,34 @@ const StudentDashboard = () => {
                 <Label className="text-xs">Description</Label>
                 <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Describe the assignment..." maxLength={2000} className="mt-1 min-h-[80px]" />
               </div>
+
+              {/* Brief file upload */}
+              <div className="md:col-span-2">
+                <Label className="text-xs">Attach Brief (PDF) — Optional</Label>
+                <div className="mt-1 flex items-center gap-3">
+                  <label className="cursor-pointer flex-1">
+                    <input type="file" className="hidden" accept=".pdf,.doc,.docx,.txt,.ppt,.pptx,.xls,.xlsx"
+                      onChange={(e) => setBriefFile(e.target.files?.[0] || null)} />
+                    <div className="border-2 border-dashed border-border rounded-lg p-4 text-center hover:border-primary/30 transition-colors">
+                      {briefFile ? (
+                        <div className="flex items-center justify-center gap-2 text-sm">
+                          <FileText className="h-4 w-4 text-primary" />
+                          <span className="font-medium truncate">{briefFile.name}</span>
+                          <button type="button" onClick={(ev) => { ev.stopPropagation(); setBriefFile(null); }} className="text-destructive hover:text-destructive/80">
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="text-muted-foreground text-sm">
+                          <Upload className="h-5 w-5 mx-auto mb-1" />
+                          Click to attach your assignment document
+                        </div>
+                      )}
+                    </div>
+                  </label>
+                </div>
+              </div>
+
               <div>
                 <Label className="text-xs">Deadline *</Label>
                 <Input type="datetime-local" value={form.deadline} onChange={(e) => setForm({ ...form, deadline: e.target.value })} required className="mt-1" />
@@ -409,11 +478,7 @@ const StudentDashboard = () => {
                       <SelectItem key={agent.user_id} value={agent.user_id}>
                         <div className="flex items-center gap-2">
                           <span>{agent.full_name || "Agent"}</span>
-                          {agent.reviewCount > 0 && (
-                            <span className="text-[10px] text-muted-foreground">
-                              ⭐ {agent.avgRating} ({agent.reviewCount})
-                            </span>
-                          )}
+                          {agent.reviewCount > 0 && <span className="text-[10px] text-muted-foreground">⭐ {agent.avgRating} ({agent.reviewCount})</span>}
                         </div>
                       </SelectItem>
                     ))}
@@ -421,45 +486,44 @@ const StudentDashboard = () => {
                 </Select>
               </div>
 
-              {/* Recommended agents */}
               {agents.length > 0 && (
                 <div className="md:col-span-2">
                   <Label className="text-xs mb-2 block">Recommended Agents</Label>
                   <div className="flex gap-3 overflow-x-auto pb-2">
                     {agents.sort((a, b) => b.avgRating - a.avgRating).slice(0, 4).map(agent => (
-                      <button type="button" key={agent.user_id}
-                        onClick={() => setForm({ ...form, selected_agent: agent.user_id })}
-                        className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all shrink-0 ${
-                          form.selected_agent === agent.user_id ? "border-primary bg-primary/10" : "border-border hover:border-primary/30"
-                        }`}>
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={agent.avatar_url || undefined} />
-                          <AvatarFallback className="bg-primary/10 text-primary text-[10px]">
-                            {(agent.full_name || "A").slice(0, 2).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="text-left">
-                          <p className="text-xs font-medium">{agent.full_name || "Agent"}</p>
-                          <div className="flex items-center gap-1">
-                            {agent.reviewCount > 0 ? (
-                              <>
-                                <Star className="h-3 w-3 text-primary fill-primary" />
-                                <span className="text-[10px] text-muted-foreground">{agent.avgRating} · {agent.onTimeRate}% on-time</span>
-                              </>
-                            ) : (
-                              <span className="text-[10px] text-muted-foreground">New agent</span>
-                            )}
+                      <AgentProfileDialog key={agent.user_id} agentUserId={agent.user_id}>
+                        <button type="button"
+                          onClick={(e) => { e.stopPropagation(); setForm({ ...form, selected_agent: agent.user_id }); }}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all shrink-0 tap-highlight ${
+                            form.selected_agent === agent.user_id ? "border-primary bg-primary/10" : "border-border hover:border-primary/30"
+                          }`}>
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={agent.avatar_url || undefined} />
+                            <AvatarFallback className="bg-primary/10 text-primary text-[10px]">{(agent.full_name || "A").slice(0, 2).toUpperCase()}</AvatarFallback>
+                          </Avatar>
+                          <div className="text-left">
+                            <p className="text-xs font-medium">{agent.full_name || "Agent"}</p>
+                            <div className="flex items-center gap-1">
+                              {agent.reviewCount > 0 ? (
+                                <>
+                                  <Star className="h-3 w-3 text-primary fill-primary" />
+                                  <span className="text-[10px] text-muted-foreground">{agent.avgRating} · {agent.onTimeRate}% on-time</span>
+                                </>
+                              ) : (
+                                <span className="text-[10px] text-muted-foreground">New agent</span>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      </button>
+                        </button>
+                      </AgentProfileDialog>
                     ))}
                   </div>
                 </div>
               )}
 
               <div className="md:col-span-2 flex justify-end gap-3">
-                <Button variant="outline" type="button" onClick={() => setShowNew(false)}>Cancel</Button>
-                <Button type="submit" disabled={loading} className="gold-glow">
+                <Button variant="outline" type="button" onClick={() => setShowNew(false)} className="tap-highlight">Cancel</Button>
+                <Button type="submit" disabled={loading} className="gold-glow tap-highlight">
                   <Send className="mr-2 h-4 w-4" /> {loading ? "Sending..." : "Send Assignment"}
                 </Button>
               </div>
@@ -468,35 +532,46 @@ const StudentDashboard = () => {
         </Card>
       )}
 
+      {/* Search */}
+      {assignments.length > 3 && (
+        <div className="relative max-w-sm">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Search assignments..." className="pl-9" value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setPage(0); }} />
+        </div>
+      )}
+
       {/* Assignments List */}
       <div className="space-y-3">
-        {assignments.length === 0 ? (
-          <Card className="border-border" style={{ boxShadow: "var(--card-shadow)" }}>
-            <CardContent className="py-12 text-center">
-              <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="font-heading font-semibold mb-1">No assignments yet</h3>
-              <p className="text-sm text-muted-foreground">Send your first assignment to an agent.</p>
-            </CardContent>
-          </Card>
+        {filteredAssignments.length === 0 ? (
+          <EmptyState icon={FileText} title="No assignments yet" description="Send your first assignment to an agent." action={
+            <Button onClick={() => setShowNew(true)} className="gold-glow tap-highlight"><Plus className="mr-2 h-4 w-4" /> New Assignment</Button>
+          } />
         ) : (
-          assignments.map((a, i) => {
+          paginatedAssignments.map((a, i) => {
             const sl = statusLabel(a);
+            const agentProfile = agents.find(ag => ag.user_id === a.agent_id);
             return (
               <Card key={a.id} className="border-border card-hover cursor-pointer animate-fade-in"
                 style={{ boxShadow: "var(--card-shadow)", animationDelay: `${i * 60}ms` }}
                 onClick={() => setSelectedId(a.id)}>
                 <CardContent className="p-4 flex items-center justify-between">
                   <div className="flex items-center gap-3 min-w-0">
+                    {agentProfile && (
+                      <Avatar className="h-8 w-8 shrink-0 hidden sm:flex">
+                        <AvatarImage src={agentProfile.avatar_url || undefined} />
+                        <AvatarFallback className="bg-primary/10 text-primary text-[10px]">{(agentProfile.full_name || "A").slice(0, 2).toUpperCase()}</AvatarFallback>
+                      </Avatar>
+                    )}
                     <div className="min-w-0">
                       <p className="font-medium truncate">{a.title}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {a.subject && `${a.subject} · `}Due {new Date(a.deadline).toLocaleDateString()}
-                        {a.sla_tier !== "standard" && ` · ${a.sla_tier.toUpperCase()}`}
-                      </p>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                        {a.subject && <span>{a.subject}</span>}
+                        <DeadlineCountdown deadline={a.deadline} />
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
-                    {a.budget && <span className="text-sm font-medium text-primary">{formatRWF(a.budget)}</span>}
+                    {a.budget && <span className="text-sm font-medium text-primary hidden sm:block">{formatRWF(a.budget)}</span>}
                     <span className={`text-xs px-2 py-1 rounded-full font-medium ${sl.cls}`}>{sl.text}</span>
                     <Eye className="h-4 w-4 text-muted-foreground hidden sm:block" />
                   </div>
@@ -506,6 +581,15 @@ const StudentDashboard = () => {
           })
         )}
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2">
+          <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage(p => p - 1)} className="tap-highlight">Prev</Button>
+          <span className="text-xs text-muted-foreground">{page + 1} / {totalPages}</span>
+          <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)} className="tap-highlight">Next</Button>
+        </div>
+      )}
     </div>
   );
 };
