@@ -14,17 +14,16 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import NotificationsBell from "@/components/NotificationsBell";
+import ThemeToggle from "@/components/ThemeToggle";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const studentNav = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "My Assignments", url: "/dashboard/assignments", icon: FileText },
   { title: "Settings", url: "/dashboard/settings", icon: Settings },
 ];
 
 const agentNav = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "My Tasks", url: "/dashboard/my-tasks", icon: Briefcase },
   { title: "Earnings", url: "/dashboard/earnings", icon: TrendingUp },
   { title: "Reputation", url: "/dashboard/reputation", icon: Star },
   { title: "Settings", url: "/dashboard/settings", icon: Settings },
@@ -32,11 +31,6 @@ const agentNav = [
 
 const adminNav = [
   { title: "Overview", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Users", url: "/dashboard/users", icon: Users },
-  { title: "Assignments", url: "/dashboard/all-assignments", icon: BookOpen },
-  { title: "Payments", url: "/dashboard/payments", icon: CreditCard },
-  { title: "Roles", url: "/dashboard/roles", icon: ShieldCheck },
-  { title: "Audit Log", url: "/dashboard/audit", icon: ScrollText },
   { title: "Settings", url: "/dashboard/settings", icon: Settings },
 ];
 
@@ -95,7 +89,7 @@ function SidebarNav() {
           </div>
         )}
         <Button variant="ghost" size="sm"
-          className="w-full justify-start text-muted-foreground hover:text-destructive transition-colors"
+          className="w-full justify-start text-muted-foreground hover:text-destructive transition-colors tap-highlight"
           onClick={() => { signOut(); navigate("/"); }}>
           <LogOut className="h-4 w-4 mr-2" />
           {!collapsed && "Log Out"}
@@ -108,7 +102,7 @@ function SidebarNav() {
 function MobileBottomNav() {
   const { role } = useAuth();
   const location = useLocation();
-  const navItems = role === "admin" ? adminNav.slice(0, 4) : role === "agent" ? agentNav.slice(0, 4) : studentNav;
+  const navItems = role === "admin" ? adminNav : role === "agent" ? agentNav : studentNav;
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-background/95 backdrop-blur-xl border-t border-border safe-area-bottom">
@@ -117,7 +111,7 @@ function MobileBottomNav() {
           const isActive = location.pathname === item.url || (item.url !== "/dashboard" && location.pathname.startsWith(item.url));
           return (
             <NavLink key={item.title} to={item.url} end
-              className={`flex flex-col items-center justify-center gap-0.5 flex-1 py-1 transition-colors ${
+              className={`flex flex-col items-center justify-center gap-0.5 flex-1 py-1 transition-colors tap-highlight ${
                 isActive ? "text-primary" : "text-muted-foreground"
               }`}>
               <item.icon className="h-5 w-5" />
@@ -143,7 +137,10 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
             <div className="md:hidden">
               <span className="text-sm font-heading font-bold">MR<span className="text-primary">.</span>A</span>
             </div>
-            <NotificationsBell />
+            <div className="flex items-center gap-2">
+              <ThemeToggle />
+              <NotificationsBell />
+            </div>
           </header>
           <main className="flex-1 p-4 md:p-6 overflow-auto pb-20 md:pb-6 page-enter">
             {children}
