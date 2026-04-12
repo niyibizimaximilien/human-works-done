@@ -27,6 +27,7 @@ import EmptyState from "@/components/EmptyState";
 import AssignmentChat from "@/components/AssignmentChat";
 import { PageTransition, StaggerGrid, StaggerItem } from "@/components/MotionWrappers";
 import { StatsSkeleton, CardListSkeleton } from "@/components/DashboardSkeleton";
+import useUnsavedChangesWarning from "@/hooks/useUnsavedChangesWarning";
 
 const SLA_OPTIONS = [
   { value: "standard", label: "Standard (48h)", fee: 0 },
@@ -66,6 +67,10 @@ const StudentDashboard = () => {
     title: "", description: "", subject: "", deadline: "", budget: "",
     sla_tier: "standard", selected_agent: "",
   });
+
+  // Warn if navigating away with unsaved form data
+  const formIsDirty = showNew && (form.title.trim().length > 0 || form.description.trim().length > 0);
+  useUnsavedChangesWarning(formIsDirty);
 
   useEffect(() => {
     if (user) { fetchAssignments(); checkAgentRequest(); fetchAgents(); fetchMyReviews(); }

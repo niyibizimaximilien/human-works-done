@@ -77,14 +77,14 @@ const AssignmentChat = ({ assignmentId, otherUserProfile }: AssignmentChatProps)
     if (!text || !user) return;
 
     if (containsContactInfo(text)) {
-      toast({
-        title: "Contact info not allowed",
-        description:
-          "Sharing phone numbers, emails, or social media handles is prohibited for safety.",
-        variant: "destructive",
-      });
       const sanitized = sanitizeMessage(text);
       setNewMessage(sanitized);
+      toast({
+        title: "Contact info removed",
+        description:
+          "Phone numbers, emails, and social handles were removed for your safety. All communication must stay in-app.",
+        variant: "destructive",
+      });
       return;
     }
 

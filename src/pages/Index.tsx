@@ -1,6 +1,7 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import Testimonials from "@/components/Testimonials";
+import BackToTop from "@/components/BackToTop";
 import {
   HeroSection,
   HowItWorksSection,
@@ -22,6 +23,7 @@ const Index = () => {
         <CTASection />
       </main>
       <Footer />
+      <BackToTop />
     </div>
   );
 };
