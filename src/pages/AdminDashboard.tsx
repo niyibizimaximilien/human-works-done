@@ -10,10 +10,15 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatRWF } from "@/lib/contactFilter";
 import {
   Users, FileText, ShieldCheck, TrendingUp, Trash2, UserCheck,
-  Ban, Search, Eye, Clock, CheckCircle, Star,
-  ScrollText, CreditCard, Download, Send, Unlock, Loader2
+  Search, Eye, Clock, CheckCircle, Star,
+  ScrollText, CreditCard, Download, Send, Unlock, Loader2,
+  ArrowRightLeft, Copy, FileDown
 } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import ConfirmDialog from "@/components/ui/alert-dialog-confirm";
+import TransferDialog from "@/components/TransferDialog";
+import { StatsSkeleton } from "@/components/DashboardSkeleton";
+
+const PAGE_SIZE = 15;
 
 const AdminDashboard = () => {
   const { user } = useAuth();
@@ -25,15 +30,16 @@ const AdminDashboard = () => {
   const [tab, setTab] = useState<"overview" | "users" | "assignments" | "audit" | "requests" | "payments">("overview");
   const [searchQuery, setSearchQuery] = useState("");
   const [profiles, setProfiles] = useState<Record<string, any>>({});
+  const [fetching, setFetching] = useState(true);
+  const [page, setPage] = useState(0);
 
   useEffect(() => { fetchAll(); }, []);
 
-  // Real-time
   useEffect(() => {
     if (!user) return;
     const channel = supabase
       .channel("admin-realtime")
-      .on("postgres_changes", { event: "*", schema: "public", table: "assignments" }, () => fetchAll())
+      .on("postgres_changes", { event: "*", schema: "public", table: "assignments" }, () => { fetchAll(); toast({ title: "📋 Data updated" }); })
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` }, () => playSound())
       .subscribe();
     return () => { supabase.removeChannel(channel); };
@@ -55,17 +61,17 @@ const AdminDashboard = () => {
       supabase.from("profiles").select("*").order("created_at", { ascending: false }),
       supabase.from("user_roles").select("*"),
       supabase.from("assignments").select("*").order("created_at", { ascending: false }),
-      supabase.from("audit_logs").select("*").order("created_at", { ascending: false }).limit(100),
+      supabase.from("audit_logs").select("*").order("created_at", { ascending: false }).limit(200),
     ]);
     setUsers(profs || []);
     setRoles(rls || []);
     setAssignments(asns || []);
     setAuditLogs(logs || []);
-    const requests = (logs || []).filter(l => l.action === "agent_request");
-    setAgentRequests(requests);
+    setAgentRequests((logs || []).filter(l => l.action === "agent_request"));
     const map: Record<string, any> = {};
     (profs || []).forEach(p => { map[p.user_id] = p; });
     setProfiles(map);
+    setFetching(false);
   };
 
   const getUserRole = (userId: string) => roles.find(r => r.user_id === userId)?.role || "student";
@@ -73,66 +79,33 @@ const AdminDashboard = () => {
   const approveAgentRequest = async (userId: string) => {
     const { error } = await supabase.from("user_roles").insert({ user_id: userId, role: "agent" as any });
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
-    await supabase.from("notifications").insert({
-      user_id: userId, title: "Agent Role Approved! 🎉",
-      message: "You've been approved as an agent. You can now receive assignments.",
-      link: "/dashboard",
-    });
+    await supabase.from("notifications").insert({ user_id: userId, title: "Agent Role Approved! 🎉", message: "You've been approved as an agent.", link: "/dashboard" });
     toast({ title: "Agent approved!" }); fetchAll();
   };
 
   const notifyStudentToPay = async (assignment: any) => {
     await supabase.from("assignments").update({ payment_status: "pending_payment" } as any).eq("id", assignment.id);
-    await supabase.from("notifications").insert({
-      user_id: assignment.student_id,
-      title: "Your Work is Ready! 💼",
-      message: `Your assignment "${assignment.title}" is complete. Please make payment to receive results.`,
-      link: "/dashboard",
-    });
-    await supabase.from("audit_logs").insert({
-      user_id: user!.id, action: "notify_payment", entity_type: "assignment", entity_id: assignment.id,
-    });
-    toast({ title: "Student notified to pay!" }); fetchAll();
+    await supabase.from("notifications").insert({ user_id: assignment.student_id, title: "Your Work is Ready! 💼", message: `"${assignment.title}" is complete. Please pay to receive results.`, link: "/dashboard" });
+    await supabase.from("audit_logs").insert({ user_id: user!.id, action: "notify_payment", entity_type: "assignment", entity_id: assignment.id });
+    toast({ title: "Student notified!" }); fetchAll();
   };
 
   const releaseResults = async (assignment: any) => {
-    await supabase.from("assignments").update({
-      admin_released: true, status: "completed",
-      reviewed_at: new Date().toISOString(),
-    } as any).eq("id", assignment.id);
-    await supabase.from("notifications").insert({
-      user_id: assignment.student_id,
-      title: "Results Released! 🎉",
-      message: `Your assignment "${assignment.title}" results are now available for download.`,
-      link: "/dashboard",
-    });
-    await supabase.from("audit_logs").insert({
-      user_id: user!.id, action: "release_results", entity_type: "assignment", entity_id: assignment.id,
-    });
-    toast({ title: "Results released to student!" }); fetchAll();
+    await supabase.from("assignments").update({ admin_released: true, status: "completed", reviewed_at: new Date().toISOString() } as any).eq("id", assignment.id);
+    await supabase.from("notifications").insert({ user_id: assignment.student_id, title: "Results Released! 🎉", message: `"${assignment.title}" results are now available.`, link: "/dashboard" });
+    await supabase.from("audit_logs").insert({ user_id: user!.id, action: "release_results", entity_type: "assignment", entity_id: assignment.id });
+    toast({ title: "Results released!" }); fetchAll();
   };
 
   const transferAssignment = async (assignmentId: string, newAgentId: string, reason: string) => {
     const assignment = assignments.find(a => a.id === assignmentId);
     if (!assignment) return;
     await supabase.from("assignments").update({
-      transferred_from: assignment.agent_id,
-      agent_id: newAgentId,
-      transfer_reason: reason,
-      status: "in_progress",
-      deliverable_url: null,
-      submitted_at: null,
+      transferred_from: assignment.agent_id, agent_id: newAgentId, transfer_reason: reason,
+      status: "in_progress", deliverable_url: null, submitted_at: null,
     } as any).eq("id", assignmentId);
-    await supabase.from("notifications").insert({
-      user_id: newAgentId, title: "Assignment Transferred to You 📋",
-      message: `You received a transferred assignment: "${assignment.title}"`,
-      link: "/dashboard",
-    });
-    await supabase.from("notifications").insert({
-      user_id: assignment.student_id, title: "Assignment Transferred ↔️",
-      message: `Your assignment "${assignment.title}" was transferred to another agent.`,
-      link: "/dashboard",
-    });
+    await supabase.from("notifications").insert({ user_id: newAgentId, title: "Assignment Transferred 📋", message: `You received a transferred assignment: "${assignment.title}"`, link: "/dashboard" });
+    await supabase.from("notifications").insert({ user_id: assignment.student_id, title: "Assignment Transferred ↔️", message: `"${assignment.title}" was transferred to another agent.`, link: "/dashboard" });
     toast({ title: "Assignment transferred!" }); fetchAll();
   };
 
@@ -147,6 +120,22 @@ const AdminDashboard = () => {
     const url = URL.createObjectURL(data);
     const a = document.createElement("a");
     a.href = url; a.download = path.split("/").pop() || "file"; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast({ title: "Copied!" });
+  };
+
+  const exportCSV = (data: any[], filename: string) => {
+    if (data.length === 0) return;
+    const keys = Object.keys(data[0]);
+    const csv = [keys.join(","), ...data.map(row => keys.map(k => `"${String(row[k] ?? "").replace(/"/g, '""')}"`).join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `${filename}.csv`; a.click();
     URL.revokeObjectURL(url);
   };
 
@@ -175,11 +164,34 @@ const AdminDashboard = () => {
     { key: "audit", label: "Audit", icon: ScrollText },
   ] as const;
 
+  if (fetching) {
+    return <div className="max-w-6xl mx-auto space-y-6"><StatsSkeleton /></div>;
+  }
+
+  // Paginated data for assignments & audit tabs
+  const paginatedAssignments = assignments.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const assignmentPages = Math.ceil(assignments.length / PAGE_SIZE);
+
   return (
     <div className="max-w-6xl mx-auto space-y-6">
-      <div>
-        <h2 className="text-2xl font-heading font-bold">Super Admin Panel</h2>
-        <p className="text-muted-foreground text-sm">Full control — assignments, payments, users, and audit.</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 className="text-2xl font-heading font-bold">Super Admin Panel</h2>
+          <p className="text-muted-foreground text-sm">Full control — assignments, payments, users, and audit.</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => exportCSV(assignments.map(a => ({
+            title: a.title, student: profiles[a.student_id]?.full_name || "", agent: profiles[a.agent_id]?.full_name || "",
+            status: a.status, budget: a.budget, payment_status: (a as any).payment_status, created: a.created_at,
+          })), "assignments")} className="text-xs tap-highlight">
+            <FileDown className="mr-1.5 h-3.5 w-3.5" /> Export Assignments
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => exportCSV(users.map(u => ({
+            name: u.full_name, student_id: u.student_id_number, university: u.university, role: getUserRole(u.user_id), joined: u.created_at,
+          })), "users")} className="text-xs tap-highlight">
+            <FileDown className="mr-1.5 h-3.5 w-3.5" /> Export Users
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -201,7 +213,7 @@ const AdminDashboard = () => {
       <div className="flex gap-2 flex-wrap">
         {tabs.map((t) => (
           <Button key={t.key} variant={tab === t.key ? "default" : "outline"} size="sm"
-            onClick={() => setTab(t.key as any)} className="text-xs">
+            onClick={() => { setTab(t.key as any); setPage(0); }} className="text-xs tap-highlight">
             <t.icon className="mr-1.5 h-3.5 w-3.5" />{t.label}
           </Button>
         ))}
@@ -210,7 +222,6 @@ const AdminDashboard = () => {
       {/* Overview */}
       {tab === "overview" && (
         <div className="space-y-6">
-          {/* Submitted for review */}
           {submittedForReview.length > 0 && (
             <Card className="border-warn/30" style={{ boxShadow: "var(--card-shadow)" }}>
               <CardHeader><CardTitle className="text-sm font-heading flex items-center gap-2"><Clock className="h-4 w-4 text-warn" /> Needs Your Review ({submittedForReview.length})</CardTitle></CardHeader>
@@ -219,19 +230,26 @@ const AdminDashboard = () => {
                   <div key={a.id} className="flex items-center justify-between py-2 border-b border-border/50 last:border-0">
                     <div className="min-w-0">
                       <p className="text-sm font-medium">{a.title}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Student: {profiles[a.student_id]?.full_name || "—"} · Agent: {profiles[a.agent_id]?.full_name || "—"}
-                      </p>
+                      <p className="text-xs text-muted-foreground">Student: {profiles[a.student_id]?.full_name || "—"} · Agent: {profiles[a.agent_id]?.full_name || "—"}</p>
                     </div>
                     <div className="flex gap-2 shrink-0">
                       {a.deliverable_url && (
-                        <Button variant="outline" size="sm" onClick={() => downloadFile("deliverables", a.deliverable_url)}>
+                        <Button variant="outline" size="sm" onClick={() => downloadFile("deliverables", a.deliverable_url)} className="tap-highlight">
                           <Download className="mr-1 h-3.5 w-3.5" /> View Work
                         </Button>
                       )}
-                      <Button size="sm" className="gold-glow" onClick={() => notifyStudentToPay(a)}>
-                        <Send className="mr-1 h-3.5 w-3.5" /> Notify to Pay
-                      </Button>
+                      <ConfirmDialog
+                        trigger={<Button size="sm" className="gold-glow tap-highlight"><Send className="mr-1 h-3.5 w-3.5" /> Notify to Pay</Button>}
+                        title="Notify student to pay?"
+                        description="This will inform the student their work is ready and they should submit payment."
+                        onConfirm={() => notifyStudentToPay(a)}
+                        confirmText="Yes, Notify"
+                      />
+                      <TransferDialog assignmentId={a.id} currentAgentId={a.agent_id} onTransfer={(newId, reason) => transferAssignment(a.id, newId, reason)}>
+                        <Button variant="outline" size="sm" className="tap-highlight" title="Transfer">
+                          <ArrowRightLeft className="h-3.5 w-3.5" />
+                        </Button>
+                      </TransferDialog>
                     </div>
                   </div>
                 ))}
@@ -239,34 +257,32 @@ const AdminDashboard = () => {
             </Card>
           )}
 
-          {/* Pending payment release */}
           {pendingPayment.length > 0 && (
             <Card className="border-primary/30" style={{ boxShadow: "var(--card-shadow)" }}>
-              <CardHeader><CardTitle className="text-sm font-heading flex items-center gap-2"><CreditCard className="h-4 w-4 text-primary" /> Payment Received — Release Results ({pendingPayment.length})</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="text-sm font-heading flex items-center gap-2"><CreditCard className="h-4 w-4 text-primary" /> Release Results ({pendingPayment.length})</CardTitle></CardHeader>
               <CardContent className="space-y-3">
                 {pendingPayment.map(a => (
                   <div key={a.id} className="flex items-center justify-between py-2 border-b border-border/50 last:border-0">
                     <div className="min-w-0">
                       <p className="text-sm font-medium">{a.title}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Student: {profiles[a.student_id]?.full_name || "—"} · {formatRWF(a.budget)}
-                      </p>
+                      <p className="text-xs text-muted-foreground">Student: {profiles[a.student_id]?.full_name || "—"} · {formatRWF(a.budget)}</p>
                       {(a as any).payment_proof_url && (
-                        <a href={(a as any).payment_proof_url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline">
-                          View Payment Proof ↗
-                        </a>
+                        <a href={(a as any).payment_proof_url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline">View Proof ↗</a>
                       )}
                     </div>
-                    <Button size="sm" className="gold-glow" onClick={() => releaseResults(a)}>
-                      <Unlock className="mr-1 h-3.5 w-3.5" /> Release Results
-                    </Button>
+                    <ConfirmDialog
+                      trigger={<Button size="sm" className="gold-glow tap-highlight"><Unlock className="mr-1 h-3.5 w-3.5" /> Release</Button>}
+                      title="Release results?"
+                      description="This will make the deliverable visible to the student. Make sure payment is verified."
+                      onConfirm={() => releaseResults(a)}
+                      confirmText="Yes, Release"
+                    />
                   </div>
                 ))}
               </CardContent>
             </Card>
           )}
 
-          {/* Recent assignments */}
           <Card className="border-border" style={{ boxShadow: "var(--card-shadow)" }}>
             <CardHeader><CardTitle className="text-sm font-heading">Recent Assignments</CardTitle></CardHeader>
             <CardContent className="space-y-2">
@@ -274,9 +290,7 @@ const AdminDashboard = () => {
                 <div key={a.id} className="flex items-center justify-between py-2 border-b border-border/50 last:border-0">
                   <div className="min-w-0">
                     <p className="text-sm font-medium truncate">{a.title}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {profiles[a.student_id]?.full_name || "—"} → {profiles[a.agent_id]?.full_name || "—"} · {a.status.replace(/_/g, " ")}
-                    </p>
+                    <p className="text-xs text-muted-foreground">{profiles[a.student_id]?.full_name || "—"} → {profiles[a.agent_id]?.full_name || "—"} · {a.status.replace(/_/g, " ")}</p>
                   </div>
                   <span className="text-xs text-muted-foreground">{formatRWF(a.budget)}</span>
                 </div>
@@ -314,9 +328,7 @@ const AdminDashboard = () => {
                         <div className="flex items-center gap-2">
                           <Avatar className="h-7 w-7">
                             <AvatarImage src={u.avatar_url || undefined} />
-                            <AvatarFallback className="bg-primary/10 text-primary text-[10px]">
-                              {(u.full_name || "U").slice(0, 2).toUpperCase()}
-                            </AvatarFallback>
+                            <AvatarFallback className="bg-primary/10 text-primary text-[10px]">{(u.full_name || "U").slice(0, 2).toUpperCase()}</AvatarFallback>
                           </Avatar>
                           <div>
                             <span className="font-medium">{u.full_name || "—"}</span>
@@ -324,7 +336,16 @@ const AdminDashboard = () => {
                           </div>
                         </div>
                       </td>
-                      <td className="py-3 pr-4 text-muted-foreground hidden md:table-cell">{u.student_id_number || "—"}</td>
+                      <td className="py-3 pr-4 text-muted-foreground hidden md:table-cell">
+                        <div className="flex items-center gap-1">
+                          <span>{u.student_id_number || "—"}</span>
+                          {u.student_id_number && (
+                            <button onClick={() => copyToClipboard(u.student_id_number)} className="text-muted-foreground hover:text-primary transition-colors" title="Copy">
+                              <Copy className="h-3 w-3" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
                       <td className="py-3 pr-4">
                         <Badge variant="secondary" className="capitalize text-[10px]">{getUserRole(u.user_id)}</Badge>
                       </td>
@@ -356,44 +377,37 @@ const AdminDashboard = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {assignments.map((a) => (
+                  {paginatedAssignments.map((a) => (
                     <tr key={a.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
                       <td className="py-3 pr-4 font-medium">{a.title}</td>
                       <td className="py-3 pr-4 text-xs">{profiles[a.student_id]?.full_name || "—"}</td>
                       <td className="py-3 pr-4 text-xs">{profiles[a.agent_id]?.full_name || "—"}</td>
-                      <td className="py-3 pr-4">
-                        <Badge variant="outline" className="capitalize text-[10px]">{a.status.replace(/_/g, " ")}</Badge>
-                      </td>
+                      <td className="py-3 pr-4"><Badge variant="outline" className="capitalize text-[10px]">{a.status.replace(/_/g, " ")}</Badge></td>
                       <td className="py-3 pr-4 text-xs">{formatRWF(a.budget)}</td>
                       <td className="py-3">
                         <div className="flex gap-1">
-                          {a.file_url && (
-                            <Button variant="ghost" size="icon" className="h-7 w-7" title="Download brief"
-                              onClick={() => downloadFile("assignment-files", a.file_url)}>
-                              <Download className="h-3.5 w-3.5" />
-                            </Button>
-                          )}
-                          {a.deliverable_url && (
-                            <Button variant="ghost" size="icon" className="h-7 w-7" title="View deliverable"
-                              onClick={() => downloadFile("deliverables", a.deliverable_url)}>
-                              <Eye className="h-3.5 w-3.5" />
-                            </Button>
-                          )}
+                          {a.file_url && <Button variant="ghost" size="icon" className="h-7 w-7" title="Download brief" onClick={() => downloadFile("assignment-files", a.file_url)}><Download className="h-3.5 w-3.5" /></Button>}
+                          {a.deliverable_url && <Button variant="ghost" size="icon" className="h-7 w-7" title="View deliverable" onClick={() => downloadFile("deliverables", a.deliverable_url)}><Eye className="h-3.5 w-3.5" /></Button>}
                           {a.status === "submitted" && (
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-primary" title="Notify to pay"
-                              onClick={() => notifyStudentToPay(a)}>
-                              <Send className="h-3.5 w-3.5" />
-                            </Button>
+                            <ConfirmDialog
+                              trigger={<Button variant="ghost" size="icon" className="h-7 w-7 text-primary" title="Notify to pay"><Send className="h-3.5 w-3.5" /></Button>}
+                              title="Notify student to pay?" description="Student will be notified their work is ready." onConfirm={() => notifyStudentToPay(a)} confirmText="Notify"
+                            />
                           )}
                           {(a as any).payment_status === "paid" && !(a as any).admin_released && (
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-primary" title="Release results"
-                              onClick={() => releaseResults(a)}>
-                              <Unlock className="h-3.5 w-3.5" />
-                            </Button>
+                            <ConfirmDialog
+                              trigger={<Button variant="ghost" size="icon" className="h-7 w-7 text-primary" title="Release"><Unlock className="h-3.5 w-3.5" /></Button>}
+                              title="Release results?" description="Student will be able to download the deliverable." onConfirm={() => releaseResults(a)} confirmText="Release"
+                            />
                           )}
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteAssignment(a.id)}>
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
+                          <TransferDialog assignmentId={a.id} currentAgentId={a.agent_id} onTransfer={(newId, reason) => transferAssignment(a.id, newId, reason)}>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" title="Transfer"><ArrowRightLeft className="h-3.5 w-3.5" /></Button>
+                          </TransferDialog>
+                          <ConfirmDialog
+                            trigger={<Button variant="ghost" size="icon" className="h-7 w-7 text-destructive"><Trash2 className="h-3.5 w-3.5" /></Button>}
+                            title="Delete assignment?" description="This will permanently remove this assignment. This cannot be undone."
+                            onConfirm={() => deleteAssignment(a.id)} confirmText="Delete" variant="destructive"
+                          />
                         </div>
                       </td>
                     </tr>
@@ -401,11 +415,18 @@ const AdminDashboard = () => {
                 </tbody>
               </table>
             </div>
+            {assignmentPages > 1 && (
+              <div className="flex items-center justify-center gap-2 mt-4">
+                <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage(p => p - 1)}>Prev</Button>
+                <span className="text-xs text-muted-foreground">{page + 1} / {assignmentPages}</span>
+                <Button variant="outline" size="sm" disabled={page >= assignmentPages - 1} onClick={() => setPage(p => p + 1)}>Next</Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
 
-      {/* Agent Requests */}
+      {/* Requests */}
       {tab === "requests" && (
         <Card className="border-border" style={{ boxShadow: "var(--card-shadow)" }}>
           <CardHeader><CardTitle className="flex items-center gap-2 font-heading"><UserCheck className="h-5 w-5 text-primary" /> Agent Requests</CardTitle></CardHeader>
@@ -422,9 +443,7 @@ const AdminDashboard = () => {
                       <div className="flex items-center gap-3">
                         <Avatar className="h-9 w-9">
                           <AvatarImage src={prof?.avatar_url || undefined} />
-                          <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                            {(prof?.full_name || "U").slice(0, 2).toUpperCase()}
-                          </AvatarFallback>
+                          <AvatarFallback className="bg-primary/10 text-primary text-xs">{(prof?.full_name || "U").slice(0, 2).toUpperCase()}</AvatarFallback>
                         </Avatar>
                         <div>
                           <p className="text-sm font-medium">{prof?.full_name || "Unknown"}</p>
@@ -434,9 +453,11 @@ const AdminDashboard = () => {
                       {hasAgentRole ? (
                         <Badge className="bg-primary/10 text-primary text-[10px]">Approved</Badge>
                       ) : (
-                        <Button size="sm" className="gold-glow text-xs" onClick={() => approveAgentRequest(req.entity_id || req.user_id)}>
-                          <UserCheck className="mr-1.5 h-3.5 w-3.5" /> Approve
-                        </Button>
+                        <ConfirmDialog
+                          trigger={<Button size="sm" className="gold-glow text-xs tap-highlight"><UserCheck className="mr-1.5 h-3.5 w-3.5" /> Approve</Button>}
+                          title="Approve as agent?" description={`${prof?.full_name || "This user"} will gain access to the agent dashboard and can receive assignments.`}
+                          onConfirm={() => approveAgentRequest(req.entity_id || req.user_id)} confirmText="Approve"
+                        />
                       )}
                     </div>
                   );
@@ -460,25 +481,20 @@ const AdminDashboard = () => {
                   <div key={a.id} className="flex items-center justify-between py-3 px-3 border border-border/50 rounded-lg">
                     <div>
                       <p className="text-sm font-medium">{a.title}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Student: {profiles[a.student_id]?.full_name || "—"} · {formatRWF(a.budget)}
-                      </p>
+                      <p className="text-xs text-muted-foreground">Student: {profiles[a.student_id]?.full_name || "—"} · {formatRWF(a.budget)}</p>
                       {(a as any).payment_proof_url && (
-                        <a href={(a as any).payment_proof_url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline">
-                          View Proof ↗
-                        </a>
+                        <a href={(a as any).payment_proof_url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline">View Proof ↗</a>
                       )}
                     </div>
                     <div className="flex items-center gap-2">
                       <Badge variant="outline" className="text-[10px] capitalize">{(a as any).payment_status?.replace(/_/g, " ")}</Badge>
                       {(a as any).payment_status === "paid" && !(a as any).admin_released && (
-                        <Button size="sm" className="gold-glow" onClick={() => releaseResults(a)}>
-                          <Unlock className="mr-1 h-3.5 w-3.5" /> Release
-                        </Button>
+                        <ConfirmDialog
+                          trigger={<Button size="sm" className="gold-glow tap-highlight"><Unlock className="mr-1 h-3.5 w-3.5" /> Release</Button>}
+                          title="Release results?" description="Verify payment proof before releasing." onConfirm={() => releaseResults(a)} confirmText="Release"
+                        />
                       )}
-                      {(a as any).admin_released && (
-                        <Badge className="bg-primary/10 text-primary text-[10px]">Released ✓</Badge>
-                      )}
+                      {(a as any).admin_released && <Badge className="bg-primary/10 text-primary text-[10px]">Released ✓</Badge>}
                     </div>
                   </div>
                 ))}
@@ -498,9 +514,7 @@ const AdminDashboard = () => {
                 <div key={log.id} className="flex items-center justify-between py-2 border-b border-border/50 last:border-0">
                   <div>
                     <p className="text-sm font-medium capitalize">{log.action.replace(/_/g, " ")}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {profiles[log.user_id]?.full_name || "System"} · {new Date(log.created_at).toLocaleString()}
-                    </p>
+                    <p className="text-xs text-muted-foreground">{profiles[log.user_id]?.full_name || "System"} · {new Date(log.created_at).toLocaleString()}</p>
                   </div>
                   <Badge variant="outline" className="text-[10px]">{log.entity_type}</Badge>
                 </div>
