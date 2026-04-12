@@ -220,21 +220,23 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <StaggerGrid className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {stats.map((s, i) => (
-          <Card key={i} className="border-border animate-fade-in" style={{ boxShadow: "var(--card-shadow)", animationDelay: `${i * 80}ms` }}>
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                <s.icon className={`h-5 w-5 ${s.color}`} />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xl md:text-2xl font-bold font-heading truncate">{s.value}</p>
-                <p className="text-xs text-muted-foreground">{s.label}</p>
-              </div>
-            </CardContent>
-          </Card>
+          <StaggerItem key={i}>
+            <Card className="border-border" style={{ boxShadow: "var(--card-shadow)" }}>
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-xl ${s.bg} flex items-center justify-center shrink-0`}>
+                  <s.icon className={`h-5 w-5 ${s.color}`} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xl md:text-2xl font-bold font-heading truncate">{s.value}</p>
+                  <p className="text-xs text-muted-foreground">{s.label}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </StaggerItem>
         ))}
-      </div>
+      </StaggerGrid>
 
       <div className="flex gap-2 flex-wrap">
         {tabs.map((t) => (
