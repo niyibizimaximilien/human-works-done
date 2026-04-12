@@ -14,8 +14,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Upload, Clock, CheckCircle, FileText, Plus,
   BookOpen, X, Eye, Briefcase, Loader2,
-  Star, CreditCard, Download, Send, AlertTriangle, Search
+  Star, CreditCard, Download, Send, AlertTriangle, Search, HelpCircle
 } from "lucide-react";
+import { ASSIGNMENT_CATEGORIES } from "@/lib/categories";
+import { relativeTime } from "@/lib/relativeTime";
+import HowToPayGuide from "@/components/HowToPayGuide";
 import StatusTimeline from "@/components/StatusTimeline";
 import DeadlineCountdown from "@/components/DeadlineCountdown";
 import ReviewDialog from "@/components/ReviewDialog";
