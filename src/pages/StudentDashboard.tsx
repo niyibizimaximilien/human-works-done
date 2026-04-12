@@ -25,6 +25,7 @@ import ReviewDialog from "@/components/ReviewDialog";
 import AgentProfileDialog from "@/components/AgentProfileDialog";
 import EmptyState from "@/components/EmptyState";
 import AssignmentChat from "@/components/AssignmentChat";
+import { PageTransition, StaggerGrid, StaggerItem } from "@/components/MotionWrappers";
 import { StatsSkeleton, CardListSkeleton } from "@/components/DashboardSkeleton";
 
 const SLA_OPTIONS = [
@@ -390,13 +391,14 @@ const StudentDashboard = () => {
 
   // ── Stats ──
   const stats = [
-    { label: "Total", value: assignments.length, icon: BookOpen, color: "text-primary" },
-    { label: "In Progress", value: assignments.filter(a => a.status === "in_progress").length, icon: Clock, color: "text-warn" },
-    { label: "Awaiting Pay", value: assignments.filter(a => a.payment_status === "pending_payment").length, icon: CreditCard, color: "text-info" },
-    { label: "Completed", value: assignments.filter(a => a.admin_released).length, icon: CheckCircle, color: "text-primary" },
+    { label: "Total", value: assignments.length, icon: BookOpen, color: "text-primary", bg: "bg-primary/10" },
+    { label: "In Progress", value: assignments.filter(a => a.status === "in_progress").length, icon: Clock, color: "text-[hsl(var(--warn))]", bg: "bg-[hsl(var(--warn))]/10" },
+    { label: "Awaiting Pay", value: assignments.filter(a => a.payment_status === "pending_payment").length, icon: CreditCard, color: "text-[hsl(var(--info))]", bg: "bg-[hsl(var(--info))]/10" },
+    { label: "Completed", value: assignments.filter(a => a.admin_released).length, icon: CheckCircle, color: "text-[hsl(var(--success))]", bg: "bg-[hsl(var(--success))]/10" },
   ];
 
   return (
+    <PageTransition>
     <div className="max-w-5xl mx-auto space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
         <div>
@@ -420,21 +422,23 @@ const StudentDashboard = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <StaggerGrid className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {stats.map((s, i) => (
-          <Card key={i} className="border-border animate-fade-in" style={{ boxShadow: "var(--card-shadow)", animationDelay: `${i * 80}ms` }}>
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                <s.icon className={`h-5 w-5 ${s.color}`} />
-              </div>
-              <div>
-                <p className="text-2xl font-bold font-heading">{s.value}</p>
-                <p className="text-xs text-muted-foreground">{s.label}</p>
-              </div>
-            </CardContent>
-          </Card>
+          <StaggerItem key={i}>
+            <Card className="border-border" style={{ boxShadow: "var(--card-shadow)" }}>
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-xl ${s.bg} flex items-center justify-center shrink-0`}>
+                  <s.icon className={`h-5 w-5 ${s.color}`} />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold font-heading">{s.value}</p>
+                  <p className="text-xs text-muted-foreground">{s.label}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </StaggerItem>
         ))}
-      </div>
+      </StaggerGrid>
 
       {/* New Assignment Form */}
       {showNew && (
