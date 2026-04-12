@@ -25,13 +25,13 @@ const HeroSection = () => (
       </p>
       <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-in" style={{ animationDelay: "400ms" }}>
         <Link to="/auth">
-          <Button size="lg" className="gold-glow h-12 px-8 font-semibold text-base">
+          <Button size="lg" className="gold-glow hover:animate-pulse-gold h-12 px-8 font-semibold text-base tap-highlight">
             <Upload className="mr-2 h-5 w-5" />
             Submit an Assignment
           </Button>
         </Link>
         <Link to="/auth">
-          <Button variant="outline" size="lg" className="h-12 px-8">
+          <Button variant="outline" size="lg" className="h-12 px-8 tap-highlight">
             <BadgeCheck className="mr-2 h-5 w-5" />
             Get Started Free
           </Button>
@@ -41,13 +41,50 @@ const HeroSection = () => (
   </section>
 );
 
+const HowItWorksSection = () => {
+  const steps = [
+    { num: "01", title: "Post Assignment", desc: "Upload your brief with deadline and budget. Attach your PDF document.", icon: Upload },
+    { num: "02", title: "Agent Works On It", desc: "A vetted agent picks up your task and starts working immediately.", icon: Briefcase },
+    { num: "03", title: "Admin Reviews", desc: "Completed work goes to admin review for quality assurance.", icon: Shield },
+    { num: "04", title: "Pay & Receive", desc: "After admin approval, pay via mobile money and download your results.", icon: CheckCircle },
+  ];
+
+  return (
+    <section id="how-it-works" className="py-20 bg-card/30">
+      <div className="container mx-auto px-4 max-w-5xl">
+        <div className="text-center mb-12">
+          <h2 className="text-2xl md:text-3xl font-heading font-bold mb-3">How It Works</h2>
+          <p className="text-muted-foreground max-w-md mx-auto">Four simple steps from posting to receiving your completed assignment.</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          {steps.map((step, i) => (
+            <div key={i} className="relative text-center animate-fade-in" style={{ animationDelay: `${i * 150}ms` }}>
+              <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto mb-4">
+                <step.icon className="h-7 w-7 text-primary" />
+              </div>
+              <span className="text-xs text-primary font-mono font-bold">{step.num}</span>
+              <h3 className="font-heading font-semibold mt-1 mb-2">{step.title}</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">{step.desc}</p>
+              {i < steps.length - 1 && (
+                <div className="hidden md:block absolute top-7 -right-3 w-6">
+                  <ArrowRight className="h-4 w-4 text-primary/30" />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};
+
 const WhatYouGetSection = () => {
   const forStudents = [
     { icon: Upload, title: "Post Assignments", desc: "Upload details, set deadline & budget. Agents see it instantly." },
     { icon: Shield, title: "Vetted Agents Only", desc: "Every agent is verified with ID and sample work before approval." },
     { icon: Lock, title: "Escrow Payments", desc: "Your money is held safely. Released only when you approve the work." },
     { icon: Clock, title: "Deadline Guarantee", desc: "Get your work on time or get a refund. No excuses." },
-    { icon: MessageCircle, title: "Direct Chat", desc: "Talk to your agent in-app. Clarify details, track progress." },
+    { icon: MessageCircle, title: "Direct Communication", desc: "Attach additional documents for clarification anytime." },
     { icon: Star, title: "Rate & Review", desc: "Hold agents accountable with ratings after every delivery." },
   ];
 
@@ -61,7 +98,7 @@ const WhatYouGetSection = () => {
   return (
     <section className="py-20">
       <div className="container mx-auto px-4 max-w-5xl">
-        <div className="mb-20">
+        <div id="students" className="mb-20 scroll-mt-20">
           <div className="flex items-center gap-3 mb-2">
             <Users className="h-5 w-5 text-primary" />
             <h2 className="text-2xl md:text-3xl font-heading font-bold">For Students</h2>
@@ -69,7 +106,7 @@ const WhatYouGetSection = () => {
           <p className="text-muted-foreground mb-8 max-w-lg">Post your assignment and let someone qualified handle it.</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {forStudents.map((f, i) => (
-              <Card key={i} className="border-border bg-card card-hover" style={{ boxShadow: "var(--card-shadow)" }}>
+              <Card key={i} className="border-border bg-card card-hover animate-fade-in" style={{ boxShadow: "var(--card-shadow)", animationDelay: `${i * 100}ms` }}>
                 <CardContent className="p-5">
                   <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mb-3">
                     <f.icon className="h-5 w-5 text-primary" />
@@ -82,7 +119,7 @@ const WhatYouGetSection = () => {
           </div>
         </div>
 
-        <div>
+        <div id="agents" className="scroll-mt-20">
           <div className="flex items-center gap-3 mb-2">
             <Briefcase className="h-5 w-5 text-primary" />
             <h2 className="text-2xl md:text-3xl font-heading font-bold">For Agents</h2>
@@ -90,7 +127,7 @@ const WhatYouGetSection = () => {
           <p className="text-muted-foreground mb-8 max-w-lg">Earn money by completing assignments for students.</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {forAgents.map((f, i) => (
-              <Card key={i} className="border-border bg-card card-hover" style={{ boxShadow: "var(--card-shadow)" }}>
+              <Card key={i} className="border-border bg-card card-hover animate-fade-in" style={{ boxShadow: "var(--card-shadow)", animationDelay: `${i * 100}ms` }}>
                 <CardContent className="p-5">
                   <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mb-3">
                     <f.icon className="h-5 w-5 text-primary" />
@@ -116,7 +153,7 @@ const TrustSection = () => (
           { icon: Lock, label: "Escrow Protected", sub: "Funds locked until you approve. Zero risk." },
           { icon: CheckCircle, label: "Verified Agents", sub: "ID-checked, sample-tested, and trial-approved." },
         ].map((t, i) => (
-          <div key={i} className="flex flex-col items-center gap-3 p-6">
+          <div key={i} className="flex flex-col items-center gap-3 p-6 animate-fade-in" style={{ animationDelay: `${i * 120}ms` }}>
             <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
               <t.icon className="h-7 w-7 text-primary" />
             </div>
@@ -138,7 +175,7 @@ const CTASection = () => (
           Sign up, post your first assignment, and get it done by a verified agent today.
         </p>
         <Link to="/auth">
-          <Button size="lg" className="gold-glow h-12 px-8 font-semibold">
+          <Button size="lg" className="gold-glow hover:animate-pulse-gold h-12 px-8 font-semibold tap-highlight">
             Get Started <ArrowRight className="ml-2 h-5 w-5" />
           </Button>
         </Link>
@@ -147,4 +184,4 @@ const CTASection = () => (
   </section>
 );
 
-export { HeroSection, WhatYouGetSection, TrustSection, CTASection };
+export { HeroSection, HowItWorksSection, WhatYouGetSection, TrustSection, CTASection };
