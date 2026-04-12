@@ -1,4 +1,5 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -7,15 +8,14 @@ import { Bell } from "lucide-react";
 
 const NotificationsBell = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState<any[]>([]);
-  const prevCountRef = useRef(0);
   const unread = notifications.filter(n => !n.read).length;
 
   useEffect(() => {
     if (!user) return;
     fetchNotifications();
 
-    // Real-time notifications
     const channel = supabase
       .channel("notifications-bell")
       .on("postgres_changes", {
@@ -53,17 +53,20 @@ const NotificationsBell = () => {
     setNotifications(data || []);
   };
 
-  const markRead = async (id: string) => {
-    await supabase.from("notifications").update({ read: true }).eq("id", id);
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+  const handleClick = async (n: any) => {
+    if (!n.read) {
+      await supabase.from("notifications").update({ read: true }).eq("id", n.id);
+      setNotifications(prev => prev.map(x => x.id === n.id ? { ...x, read: true } : x));
+    }
+    if (n.link) {
+      navigate(n.link);
+    }
   };
 
   const markAllRead = async () => {
     const unreadIds = notifications.filter(n => !n.read).map(n => n.id);
     if (unreadIds.length === 0) return;
-    for (const id of unreadIds) {
-      await supabase.from("notifications").update({ read: true }).eq("id", id);
-    }
+    await supabase.from("notifications").update({ read: true }).in("id", unreadIds);
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
   };
 
@@ -93,7 +96,7 @@ const NotificationsBell = () => {
             notifications.map(n => (
               <div key={n.id}
                 className={`px-3 py-2.5 border-b border-border/50 last:border-0 cursor-pointer hover:bg-secondary/30 transition-colors ${!n.read ? "bg-primary/5" : ""}`}
-                onClick={() => markRead(n.id)}>
+                onClick={() => handleClick(n)}>
                 <p className="text-sm font-medium">{n.title}</p>
                 <p className="text-xs text-muted-foreground">{n.message}</p>
                 <p className="text-[10px] text-muted-foreground mt-1">{new Date(n.created_at).toLocaleString()}</p>
