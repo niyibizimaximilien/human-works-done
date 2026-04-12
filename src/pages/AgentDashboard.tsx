@@ -295,6 +295,7 @@ const AgentDashboard = () => {
         )}
       </div>
     </div>
+    </PageTransition>
   );
 };
 
