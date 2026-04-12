@@ -631,6 +631,7 @@ const StudentDashboard = () => {
         </div>
       )}
     </div>
+    </PageTransition>
   );
 };
 
