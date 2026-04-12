@@ -17,7 +17,7 @@ const SettingsPage = () => {
   const [form, setForm] = useState({
     full_name: profile?.full_name || "",
     phone: profile?.phone || "",
-    student_id_number: (profile as any)?.student_id_number || "",
+    student_id_number: profile?.student_id_number || "",
     university: profile?.university || "",
     department: profile?.department || "",
     level: profile?.level || "",
@@ -52,7 +52,7 @@ const SettingsPage = () => {
     }
     setLoading(true);
     try {
-      const { error } = await supabase.from("profiles").update(form as any).eq("user_id", user!.id);
+      const { error } = await supabase.from("profiles").update(form).eq("user_id", user!.id);
       if (error) throw error;
       await refreshProfile();
       toast({ title: "Settings saved!" });

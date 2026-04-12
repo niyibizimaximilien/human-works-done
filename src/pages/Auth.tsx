@@ -33,7 +33,7 @@ const Auth = () => {
         if (error) throw error;
         navigate("/dashboard");
       } else if (mode === "signup") {
-        const { data, error } = await supabase.auth.signUp({
+        const { error } = await supabase.auth.signUp({
           email: form.email,
           password: form.password,
           options: {
@@ -42,9 +42,7 @@ const Auth = () => {
           },
         });
         if (error) throw error;
-        if (data.user) {
-          await supabase.from("user_roles").insert({ user_id: data.user.id, role: "student" as any });
-        }
+        // Profile and student role are created automatically by the handle_new_user trigger
         toast({ title: "Check your email", description: "We sent you a verification link." });
       } else if (mode === "forgot") {
         const { error } = await supabase.auth.resetPasswordForEmail(form.email, {
@@ -59,8 +57,9 @@ const Auth = () => {
         toast({ title: "Password updated!", description: "You can now sign in with your new password." });
         setMode("login");
       }
-    } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "An unexpected error occurred.";
+      toast({ title: "Error", description: message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
