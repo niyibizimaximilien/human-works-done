@@ -96,8 +96,9 @@ const Onboarding = () => {
       await refreshProfile();
       toast({ title: "Welcome aboard! 🎉", description: "Your profile is all set." });
       navigate("/dashboard");
-    } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "An unexpected error occurred.";
+      toast({ title: "Error", description: message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
