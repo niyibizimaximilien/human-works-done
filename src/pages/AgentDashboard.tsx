@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import confetti from "canvas-confetti";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,6 +19,7 @@ import { relativeTime } from "@/lib/relativeTime";
 import { PageTransition, StaggerGrid, StaggerItem } from "@/components/MotionWrappers";
 import { StatsSkeleton, CardListSkeleton } from "@/components/DashboardSkeleton";
 import ConfirmDialog from "@/components/ui/alert-dialog-confirm";
+import useKeyboardShortcuts from "@/hooks/useKeyboardShortcuts";
 
 const AgentDashboard = () => {
   const { user } = useAuth();
@@ -27,6 +29,10 @@ const AgentDashboard = () => {
   const [fetching, setFetching] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [studentProfiles, setStudentProfiles] = useState<Record<string, { full_name?: string; avatar_url?: string }>>({});
+
+  useKeyboardShortcuts(useCallback(() => ({
+    "Escape": () => { if (selectedId) setSelectedId(null); },
+  }), [selectedId])());
 
   useEffect(() => {
     if (user) { fetchMyTasks(); fetchReputation(); }
@@ -130,6 +136,9 @@ const AgentDashboard = () => {
     const task = myTasks.find(t => t.id === selectedId);
     if (!task) { setSelectedId(null); return null; }
     const studentProfile = studentProfiles[task.student_id];
+    if (task.status === "completed") {
+      setTimeout(() => confetti({ particleCount: 60, spread: 50, origin: { y: 0.7 } }), 300);
+    }
     return (
       <div className="max-w-3xl mx-auto space-y-4 page-enter">
         <Button variant="ghost" size="sm" onClick={() => setSelectedId(null)} className="tap-highlight">
