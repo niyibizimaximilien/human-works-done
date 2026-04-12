@@ -16,7 +16,10 @@ import {
 } from "lucide-react";
 import ConfirmDialog from "@/components/ui/alert-dialog-confirm";
 import TransferDialog from "@/components/TransferDialog";
+import AdminCharts from "@/components/AdminCharts";
+import { relativeTime } from "@/lib/relativeTime";
 import { StatsSkeleton } from "@/components/DashboardSkeleton";
+import { StaggerGrid, StaggerItem, PageTransition } from "@/components/MotionWrappers";
 
 const PAGE_SIZE = 15;
 
@@ -32,6 +35,9 @@ const AdminDashboard = () => {
   const [profiles, setProfiles] = useState<Record<string, any>>({});
   const [fetching, setFetching] = useState(true);
   const [page, setPage] = useState(0);
+  const [selectedRequests, setSelectedRequests] = useState<Set<string>>(new Set());
+  const [selectedPayments, setSelectedPayments] = useState<Set<string>>(new Set());
+  const [bulkLoading, setBulkLoading] = useState(false);
 
   useEffect(() => { fetchAll(); }, []);
 
