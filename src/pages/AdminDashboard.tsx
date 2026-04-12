@@ -115,6 +115,27 @@ const AdminDashboard = () => {
     toast({ title: "Assignment transferred!" }); fetchAll();
   };
 
+  const bulkApproveAgents = async () => {
+    setBulkLoading(true);
+    for (const userId of selectedRequests) {
+      await approveAgentRequest(userId);
+    }
+    setSelectedRequests(new Set());
+    setBulkLoading(false);
+    toast({ title: `${selectedRequests.size} agents approved!` });
+  };
+
+  const bulkReleasePayments = async () => {
+    setBulkLoading(true);
+    for (const id of selectedPayments) {
+      const a = assignments.find(x => x.id === id);
+      if (a) await releaseResults(a);
+    }
+    setSelectedPayments(new Set());
+    setBulkLoading(false);
+    toast({ title: `${selectedPayments.size} results released!` });
+  };
+
   const deleteAssignment = async (id: string) => {
     await supabase.from("assignments").delete().eq("id", id);
     toast({ title: "Assignment deleted" }); fetchAll();
