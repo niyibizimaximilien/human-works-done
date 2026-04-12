@@ -118,6 +118,7 @@ export default {
         "scale-in": "scale-in 0.3s ease-out",
         "slide-up": "slide-up 0.5s ease-out",
         "shimmer": "shimmer 2s linear infinite",
+        "gradient-shift": "gradient-shift 4s ease infinite",
       },
     },
   },
