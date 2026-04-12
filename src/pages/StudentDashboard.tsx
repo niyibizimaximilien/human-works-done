@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -13,14 +13,15 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Upload, Clock, CheckCircle, FileText, Plus,
-  BookOpen, X, Eye, Zap, Briefcase, Loader2,
-  Star, CreditCard, Download, ArrowRight, Send, AlertTriangle, Search
+  BookOpen, X, Eye, Briefcase, Loader2,
+  Star, CreditCard, Download, Send, AlertTriangle, Search
 } from "lucide-react";
 import StatusTimeline from "@/components/StatusTimeline";
 import DeadlineCountdown from "@/components/DeadlineCountdown";
 import ReviewDialog from "@/components/ReviewDialog";
 import AgentProfileDialog from "@/components/AgentProfileDialog";
 import EmptyState from "@/components/EmptyState";
+import AssignmentChat from "@/components/AssignmentChat";
 import { StatsSkeleton, CardListSkeleton } from "@/components/DashboardSkeleton";
 
 const SLA_OPTIONS = [
@@ -31,10 +32,21 @@ const SLA_OPTIONS = [
 
 const PAGE_SIZE = 10;
 
+interface AgentInfo {
+  user_id: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  university: string | null;
+  department: string | null;
+  avgRating: number;
+  reviewCount: number;
+  onTimeRate: number;
+}
+
 const StudentDashboard = () => {
   const { user, role } = useAuth();
   const [assignments, setAssignments] = useState<any[]>([]);
-  const [agents, setAgents] = useState<any[]>([]);
+  const [agents, setAgents] = useState<AgentInfo[]>([]);
   const [showNew, setShowNew] = useState(false);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
@@ -77,7 +89,7 @@ const StudentDashboard = () => {
       osc.connect(gain); gain.connect(ctx.destination);
       osc.frequency.value = 800; gain.gain.value = 0.1;
       osc.start(); osc.stop(ctx.currentTime + 0.15);
-    } catch {}
+    } catch { /* ignore audio errors */ }
   };
 
   const fetchAssignments = async () => {
@@ -93,11 +105,20 @@ const StudentDashboard = () => {
       const ids = agentRoles.map(r => r.user_id);
       const { data: profiles } = await supabase.from("profiles").select("*").in("user_id", ids);
       const { data: reviewsData } = await supabase.from("agent_reviews").select("agent_id, rating, on_time");
-      const agentList = (profiles || []).map(p => {
+      const agentList: AgentInfo[] = (profiles || []).map(p => {
         const ar = (reviewsData || []).filter(r => r.agent_id === p.user_id);
         const avgRating = ar.length > 0 ? ar.reduce((s, r) => s + r.rating, 0) / ar.length : 0;
         const onTimeRate = ar.length > 0 ? (ar.filter(r => r.on_time).length / ar.length) * 100 : 0;
-        return { ...p, avgRating: Math.round(avgRating * 10) / 10, reviewCount: ar.length, onTimeRate: Math.round(onTimeRate) };
+        return {
+          user_id: p.user_id,
+          full_name: p.full_name,
+          avatar_url: p.avatar_url,
+          university: p.university,
+          department: p.department,
+          avgRating: Math.round(avgRating * 10) / 10,
+          reviewCount: ar.length,
+          onTimeRate: Math.round(onTimeRate),
+        };
       });
       setAgents(agentList);
     }
@@ -146,12 +167,11 @@ const StudentDashboard = () => {
       }).select().single();
       if (error) throw error;
 
-      // Upload brief file if attached
       if (briefFile && newAssignment) {
         const path = `${newAssignment.id}/${Date.now()}-${briefFile.name}`;
         const { error: uploadError } = await supabase.storage.from("assignment-files").upload(path, briefFile);
         if (!uploadError) {
-          await supabase.from("assignments").update({ file_url: path } as any).eq("id", newAssignment.id);
+          await supabase.from("assignments").update({ file_url: path }).eq("id", newAssignment.id);
         }
       }
 
@@ -166,8 +186,9 @@ const StudentDashboard = () => {
       setForm({ title: "", description: "", subject: "", deadline: "", budget: "", sla_tier: "standard", selected_agent: "" });
       setBriefFile(null);
       fetchAssignments();
-    } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to create assignment.";
+      toast({ title: "Error", description: message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -182,7 +203,7 @@ const StudentDashboard = () => {
     if (error) {
       toast({ title: "Upload failed", description: error.message, variant: "destructive" });
     } else {
-      await supabase.from("assignments").update({ file_url: path } as any).eq("id", assignmentId);
+      await supabase.from("assignments").update({ file_url: path }).eq("id", assignmentId);
       toast({ title: "Document attached!" });
       fetchAssignments();
     }
@@ -199,7 +220,7 @@ const StudentDashboard = () => {
       toast({ title: "Upload failed", description: error.message, variant: "destructive" });
     } else {
       const { data: { publicUrl } } = supabase.storage.from("assignment-files").getPublicUrl(path);
-      await supabase.from("assignments").update({ payment_proof_url: publicUrl, payment_status: "paid" } as any).eq("id", assignmentId);
+      await supabase.from("assignments").update({ payment_proof_url: publicUrl, payment_status: "paid" }).eq("id", assignmentId);
       const { data: adminRoles } = await supabase.from("user_roles").select("user_id").eq("role", "admin");
       if (adminRoles) {
         for (const ar of adminRoles) {
@@ -242,6 +263,7 @@ const StudentDashboard = () => {
     return <div className="max-w-5xl mx-auto space-y-6"><StatsSkeleton /><CardListSkeleton /></div>;
   }
 
+  // ── Detail View ──
   if (selectedId) {
     const assignment = assignments.find(a => a.id === selectedId);
     if (!assignment) { setSelectedId(null); return null; }
@@ -262,7 +284,6 @@ const StudentDashboard = () => {
               <Badge className={sl.cls}>{sl.text}</Badge>
             </div>
 
-            {/* Agent info */}
             {agentProfile && (
               <AgentProfileDialog agentUserId={agentProfile.user_id}>
                 <button className="flex items-center gap-2 p-2 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors w-full text-left tap-highlight">
@@ -278,7 +299,6 @@ const StudentDashboard = () => {
               </AgentProfileDialog>
             )}
 
-            {/* Status Timeline */}
             <StatusTimeline assignment={assignment} />
 
             <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
@@ -315,7 +335,6 @@ const StudentDashboard = () => {
               )}
             </div>
 
-            {/* Review button */}
             {assignment.admin_released && !hasReviewed && assignment.agent_id && (
               <ReviewDialog assignmentId={assignment.id} agentId={assignment.agent_id} studentId={user!.id} onReviewSubmitted={() => { fetchMyReviews(); fetchAgents(); }}>
                 <Button variant="outline" size="sm" className="w-full tap-highlight">
@@ -324,7 +343,6 @@ const StudentDashboard = () => {
               </ReviewDialog>
             )}
 
-            {/* Payment section */}
             {assignment.payment_status === "pending_payment" && !assignment.admin_released && (
               <Card className="border-primary/30 bg-primary/5">
                 <CardContent className="p-4 space-y-3">
@@ -348,12 +366,19 @@ const StudentDashboard = () => {
                 <Clock className="h-4 w-4" /> Payment proof submitted. Waiting for admin to release.
               </div>
             )}
+
+            {/* In-app chat */}
+            <AssignmentChat
+              assignmentId={assignment.id}
+              otherUserProfile={agentProfile ? { full_name: agentProfile.full_name || undefined, avatar_url: agentProfile.avatar_url || undefined } : null}
+            />
           </CardContent>
         </Card>
       </div>
     );
   }
 
+  // ── Stats ──
   const stats = [
     { label: "Total", value: assignments.length, icon: BookOpen, color: "text-primary" },
     { label: "In Progress", value: assignments.filter(a => a.status === "in_progress").length, icon: Clock, color: "text-warn" },
@@ -423,7 +448,6 @@ const StudentDashboard = () => {
                 <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Describe the assignment..." maxLength={2000} className="mt-1 min-h-[80px]" />
               </div>
 
-              {/* Brief file upload */}
               <div className="md:col-span-2">
                 <Label className="text-xs">Attach Brief (PDF) — Optional</Label>
                 <div className="mt-1 flex items-center gap-3">
@@ -491,31 +515,29 @@ const StudentDashboard = () => {
                   <Label className="text-xs mb-2 block">Recommended Agents</Label>
                   <div className="flex gap-3 overflow-x-auto pb-2">
                     {agents.sort((a, b) => b.avgRating - a.avgRating).slice(0, 4).map(agent => (
-                      <AgentProfileDialog key={agent.user_id} agentUserId={agent.user_id}>
-                        <button type="button"
-                          onClick={(e) => { e.stopPropagation(); setForm({ ...form, selected_agent: agent.user_id }); }}
-                          className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all shrink-0 tap-highlight ${
-                            form.selected_agent === agent.user_id ? "border-primary bg-primary/10" : "border-border hover:border-primary/30"
-                          }`}>
-                          <Avatar className="h-8 w-8">
-                            <AvatarImage src={agent.avatar_url || undefined} />
-                            <AvatarFallback className="bg-primary/10 text-primary text-[10px]">{(agent.full_name || "A").slice(0, 2).toUpperCase()}</AvatarFallback>
-                          </Avatar>
-                          <div className="text-left">
-                            <p className="text-xs font-medium">{agent.full_name || "Agent"}</p>
-                            <div className="flex items-center gap-1">
-                              {agent.reviewCount > 0 ? (
-                                <>
-                                  <Star className="h-3 w-3 text-primary fill-primary" />
-                                  <span className="text-[10px] text-muted-foreground">{agent.avgRating} · {agent.onTimeRate}% on-time</span>
-                                </>
-                              ) : (
-                                <span className="text-[10px] text-muted-foreground">New agent</span>
-                              )}
-                            </div>
+                      <button key={agent.user_id} type="button"
+                        onClick={() => setForm({ ...form, selected_agent: agent.user_id })}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all shrink-0 tap-highlight ${
+                          form.selected_agent === agent.user_id ? "border-primary bg-primary/10" : "border-border hover:border-primary/30"
+                        }`}>
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={agent.avatar_url || undefined} />
+                          <AvatarFallback className="bg-primary/10 text-primary text-[10px]">{(agent.full_name || "A").slice(0, 2).toUpperCase()}</AvatarFallback>
+                        </Avatar>
+                        <div className="text-left">
+                          <p className="text-xs font-medium">{agent.full_name || "Agent"}</p>
+                          <div className="flex items-center gap-1">
+                            {agent.reviewCount > 0 ? (
+                              <>
+                                <Star className="h-3 w-3 text-primary fill-primary" />
+                                <span className="text-[10px] text-muted-foreground">{agent.avgRating} · {agent.onTimeRate}% on-time</span>
+                              </>
+                            ) : (
+                              <span className="text-[10px] text-muted-foreground">New agent</span>
+                            )}
                           </div>
-                        </button>
-                      </AgentProfileDialog>
+                        </div>
+                      </button>
                     ))}
                   </div>
                 </div>
@@ -532,7 +554,6 @@ const StudentDashboard = () => {
         </Card>
       )}
 
-      {/* Search */}
       {assignments.length > 3 && (
         <div className="relative max-w-sm">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -540,7 +561,6 @@ const StudentDashboard = () => {
         </div>
       )}
 
-      {/* Assignments List */}
       <div className="space-y-3">
         {filteredAssignments.length === 0 ? (
           <EmptyState icon={FileText} title="No assignments yet" description="Send your first assignment to an agent." action={
@@ -582,7 +602,6 @@ const StudentDashboard = () => {
         )}
       </div>
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2">
           <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage(p => p - 1)} className="tap-highlight">Prev</Button>

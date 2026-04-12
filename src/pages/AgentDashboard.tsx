@@ -7,12 +7,13 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { formatRWF } from "@/lib/contactFilter";
 import {
-  Briefcase, Clock, CheckCircle, FileText, Zap, TrendingUp,
-  Eye, Star, Loader2, Upload, Download, Send, ArrowLeft
+  Briefcase, Clock, CheckCircle, FileText, TrendingUp,
+  Star, Loader2, Upload, Download, Send, ArrowLeft
 } from "lucide-react";
 import StatusTimeline from "@/components/StatusTimeline";
 import DeadlineCountdown from "@/components/DeadlineCountdown";
 import EmptyState from "@/components/EmptyState";
+import AssignmentChat from "@/components/AssignmentChat";
 import { StatsSkeleton, CardListSkeleton } from "@/components/DashboardSkeleton";
 import ConfirmDialog from "@/components/ui/alert-dialog-confirm";
 
@@ -23,6 +24,7 @@ const AgentDashboard = () => {
   const [reputation, setReputation] = useState({ avg: 0, count: 0, onTimeRate: 0 });
   const [fetching, setFetching] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [studentProfiles, setStudentProfiles] = useState<Record<string, { full_name?: string; avatar_url?: string }>>({});
 
   useEffect(() => {
     if (user) { fetchMyTasks(); fetchReputation(); }
@@ -50,7 +52,7 @@ const AgentDashboard = () => {
       osc.connect(gain); gain.connect(ctx.destination);
       osc.frequency.value = 600; gain.gain.value = 0.1;
       osc.start(); osc.stop(ctx.currentTime + 0.15);
-    } catch {}
+    } catch { /* ignore */ }
   };
 
   const fetchMyTasks = async () => {
@@ -58,6 +60,15 @@ const AgentDashboard = () => {
       .eq("agent_id", user!.id).order("created_at", { ascending: false });
     setMyTasks(data || []);
     setFetching(false);
+
+    // Fetch student profiles for chat
+    if (data && data.length > 0) {
+      const studentIds = [...new Set(data.map(t => t.student_id))];
+      const { data: profiles } = await supabase.from("profiles").select("user_id, full_name, avatar_url").in("user_id", studentIds);
+      const map: Record<string, { full_name?: string; avatar_url?: string }> = {};
+      (profiles || []).forEach(p => { map[p.user_id] = { full_name: p.full_name || undefined, avatar_url: p.avatar_url || undefined }; });
+      setStudentProfiles(map);
+    }
   };
 
   const fetchReputation = async () => {
@@ -78,7 +89,7 @@ const AgentDashboard = () => {
     if (error) {
       toast({ title: "Upload failed", description: error.message, variant: "destructive" });
     } else {
-      await supabase.from("assignments").update({ deliverable_url: path } as any).eq("id", assignmentId);
+      await supabase.from("assignments").update({ deliverable_url: path }).eq("id", assignmentId);
       toast({ title: "Deliverable uploaded!" });
       fetchMyTasks();
     }
@@ -116,6 +127,7 @@ const AgentDashboard = () => {
   if (selectedId) {
     const task = myTasks.find(t => t.id === selectedId);
     if (!task) { setSelectedId(null); return null; }
+    const studentProfile = studentProfiles[task.student_id];
     return (
       <div className="max-w-3xl mx-auto space-y-4 page-enter">
         <Button variant="ghost" size="sm" onClick={() => setSelectedId(null)} className="tap-highlight">
@@ -178,6 +190,12 @@ const AgentDashboard = () => {
                 </div>
               )}
             </div>
+
+            {/* In-app chat */}
+            <AssignmentChat
+              assignmentId={task.id}
+              otherUserProfile={studentProfile || null}
+            />
           </CardContent>
         </Card>
       </div>
