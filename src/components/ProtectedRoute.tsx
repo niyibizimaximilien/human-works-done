@@ -1,0 +1,32 @@
+import { Navigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+
+interface ProtectedRouteProps {
+  children: React.ReactNode;
+  requireOnboarding?: boolean;
+}
+
+const ProtectedRoute = ({ children, requireOnboarding = true }: ProtectedRouteProps) => {
+  const { user, loading, profile } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) return <Navigate to="/auth" replace />;
+
+  if (requireOnboarding && profile && !profile.onboarding_completed) {
+    return <Navigate to="/onboarding" replace />;
+  }
+
+  return <>{children}</>;
+};
+
+export default ProtectedRoute;

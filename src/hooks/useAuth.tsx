@@ -1,13 +1,16 @@
 import { useState, useEffect, createContext, useContext, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
+import type { Tables } from "@/integrations/supabase/types";
+
+type Profile = Tables<"profiles">;
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
   role: string | null;
-  profile: any | null;
+  profile: Profile | null;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -27,7 +30,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [role, setRole] = useState<string | null>(null);
-  const [profile, setProfile] = useState<any | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
 
   const fetchUserData = async (userId: string) => {
     const [{ data: roles }, { data: prof }] = await Promise.all([
@@ -43,11 +46,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
+    // Set up listener BEFORE getSession to avoid race conditions
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
+          // Use setTimeout to avoid blocking the auth state change
           setTimeout(() => fetchUserData(session.user.id), 0);
         } else {
           setRole(null);

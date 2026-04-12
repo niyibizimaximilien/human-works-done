@@ -32,7 +32,19 @@ const Auth = () => {
           email: form.email,
           password: form.password,
         });
-        if (error) throw error;
+        if (error) {
+          // Detect unconfirmed email
+          if (error.message.toLowerCase().includes("email not confirmed") || error.message.toLowerCase().includes("invalid login")) {
+            toast({
+              title: "Email not verified",
+              description: "Please check your inbox and click the verification link before signing in.",
+              variant: "destructive",
+            });
+            setLoading(false);
+            return;
+          }
+          throw error;
+        }
         navigate("/dashboard");
       } else if (mode === "signup") {
         const { error } = await supabase.auth.signUp({
