@@ -142,7 +142,7 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
               <NotificationsBell />
             </div>
           </header>
-          <main className="flex-1 p-4 md:p-6 overflow-auto pb-20 md:pb-6 page-enter">
+          <main className="flex-1 p-4 md:p-6 overflow-auto pb-24 md:pb-6 page-enter">
             {children}
           </main>
         </div>
