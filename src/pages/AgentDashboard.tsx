@@ -8,7 +8,7 @@ import { toast } from "@/hooks/use-toast";
 import { formatRWF } from "@/lib/contactFilter";
 import {
   Briefcase, Clock, CheckCircle, FileText, TrendingUp,
-  Star, Loader2, Upload, Download, Send, ArrowLeft
+  Star, Loader2, Upload, Download, Send, ArrowLeft, FileDown
 } from "lucide-react";
 import StatusTimeline from "@/components/StatusTimeline";
 import DeadlineCountdown from "@/components/DeadlineCountdown";
