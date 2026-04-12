@@ -8,12 +8,14 @@ import { toast } from "@/hooks/use-toast";
 import { formatRWF } from "@/lib/contactFilter";
 import {
   Briefcase, Clock, CheckCircle, FileText, TrendingUp,
-  Star, Loader2, Upload, Download, Send, ArrowLeft
+  Star, Loader2, Upload, Download, Send, ArrowLeft, FileDown
 } from "lucide-react";
 import StatusTimeline from "@/components/StatusTimeline";
 import DeadlineCountdown from "@/components/DeadlineCountdown";
 import EmptyState from "@/components/EmptyState";
 import AssignmentChat from "@/components/AssignmentChat";
+import { relativeTime } from "@/lib/relativeTime";
+import { PageTransition, StaggerGrid, StaggerItem } from "@/components/MotionWrappers";
 import { StatsSkeleton, CardListSkeleton } from "@/components/DashboardSkeleton";
 import ConfirmDialog from "@/components/ui/alert-dialog-confirm";
 
@@ -207,43 +209,59 @@ const AgentDashboard = () => {
   const activeCount = myTasks.filter(t => ["in_progress", "submitted"].includes(t.status)).length;
 
   const stats = [
-    { label: "Received", value: myTasks.length, icon: Briefcase, color: "text-primary" },
-    { label: "Active", value: activeCount, icon: Clock, color: "text-warn" },
-    { label: "Completed", value: completedCount, icon: CheckCircle, color: "text-primary" },
-    { label: "Earnings", value: formatRWF(totalEarnings), icon: TrendingUp, color: "text-primary" },
+    { label: "Received", value: myTasks.length, icon: Briefcase, color: "text-primary", bg: "bg-primary/10" },
+    { label: "Active", value: activeCount, icon: Clock, color: "text-[hsl(var(--warn))]", bg: "bg-[hsl(var(--warn))]/10" },
+    { label: "Completed", value: completedCount, icon: CheckCircle, color: "text-[hsl(var(--success))]", bg: "bg-[hsl(var(--success))]/10" },
+    { label: "Earnings", value: formatRWF(totalEarnings), icon: TrendingUp, color: "text-[hsl(var(--info))]", bg: "bg-[hsl(var(--info))]/10" },
   ];
 
-  return (
+    return (
+    <PageTransition>
     <div className="max-w-5xl mx-auto space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
         <div>
           <h2 className="text-2xl font-heading font-bold">Agent Dashboard</h2>
           <p className="text-muted-foreground text-sm">Manage received assignments and deliver work.</p>
         </div>
-        {reputation.count > 0 && (
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20">
-            <Star className="h-4 w-4 text-primary fill-primary" />
-            <span className="text-sm font-semibold">{reputation.avg}</span>
-            <span className="text-xs text-muted-foreground">({reputation.count} reviews · {reputation.onTimeRate}% on-time)</span>
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          {completedCount > 0 && (
+            <Button variant="outline" size="sm" className="text-xs tap-highlight" onClick={() => {
+              const completed = myTasks.filter(t => t.status === "completed");
+              const csv = ["Title,Subject,Budget,Date", ...completed.map(t => `"${t.title}","${t.subject || ""}","${t.budget || 0}","${t.reviewed_at || t.updated_at}"`)].join("\n");
+              const blob = new Blob([csv], { type: "text/csv" });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a"); a.href = url; a.download = "my-earnings.csv"; a.click(); URL.revokeObjectURL(url);
+            }}>
+              <FileDown className="mr-1.5 h-3.5 w-3.5" /> Export
+            </Button>
+          )}
+          {reputation.count > 0 && (
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[hsl(var(--warn))]/10 border border-[hsl(var(--warn))]/20">
+              <Star className="h-4 w-4 text-[hsl(var(--warn))] fill-[hsl(var(--warn))]" />
+              <span className="text-sm font-semibold">{reputation.avg}</span>
+              <span className="text-xs text-muted-foreground">({reputation.count} reviews · {reputation.onTimeRate}% on-time)</span>
+            </div>
+          )}
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <StaggerGrid className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {stats.map((s, i) => (
-          <Card key={i} className="border-border animate-fade-in" style={{ boxShadow: "var(--card-shadow)", animationDelay: `${i * 80}ms` }}>
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                <s.icon className={`h-5 w-5 ${s.color}`} />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xl md:text-2xl font-bold font-heading truncate">{s.value}</p>
-                <p className="text-xs text-muted-foreground">{s.label}</p>
-              </div>
-            </CardContent>
-          </Card>
+          <StaggerItem key={i}>
+            <Card className="border-border" style={{ boxShadow: "var(--card-shadow)" }}>
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-xl ${s.bg} flex items-center justify-center shrink-0`}>
+                  <s.icon className={`h-5 w-5 ${s.color}`} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xl md:text-2xl font-bold font-heading truncate">{s.value}</p>
+                  <p className="text-xs text-muted-foreground">{s.label}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </StaggerItem>
         ))}
-      </div>
+      </StaggerGrid>
 
       <div className="space-y-3">
         {myTasks.length === 0 ? (
@@ -277,6 +295,7 @@ const AgentDashboard = () => {
         )}
       </div>
     </div>
+    </PageTransition>
   );
 };
 

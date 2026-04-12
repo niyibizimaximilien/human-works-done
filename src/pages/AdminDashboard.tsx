@@ -16,7 +16,10 @@ import {
 } from "lucide-react";
 import ConfirmDialog from "@/components/ui/alert-dialog-confirm";
 import TransferDialog from "@/components/TransferDialog";
+import AdminCharts from "@/components/AdminCharts";
+import { relativeTime } from "@/lib/relativeTime";
 import { StatsSkeleton } from "@/components/DashboardSkeleton";
+import { StaggerGrid, StaggerItem, PageTransition } from "@/components/MotionWrappers";
 
 const PAGE_SIZE = 15;
 
@@ -32,6 +35,9 @@ const AdminDashboard = () => {
   const [profiles, setProfiles] = useState<Record<string, any>>({});
   const [fetching, setFetching] = useState(true);
   const [page, setPage] = useState(0);
+  const [selectedRequests, setSelectedRequests] = useState<Set<string>>(new Set());
+  const [selectedPayments, setSelectedPayments] = useState<Set<string>>(new Set());
+  const [bulkLoading, setBulkLoading] = useState(false);
 
   useEffect(() => { fetchAll(); }, []);
 
@@ -109,6 +115,27 @@ const AdminDashboard = () => {
     toast({ title: "Assignment transferred!" }); fetchAll();
   };
 
+  const bulkApproveAgents = async () => {
+    setBulkLoading(true);
+    for (const userId of selectedRequests) {
+      await approveAgentRequest(userId);
+    }
+    setSelectedRequests(new Set());
+    setBulkLoading(false);
+    toast({ title: `${selectedRequests.size} agents approved!` });
+  };
+
+  const bulkReleasePayments = async () => {
+    setBulkLoading(true);
+    for (const id of selectedPayments) {
+      const a = assignments.find(x => x.id === id);
+      if (a) await releaseResults(a);
+    }
+    setSelectedPayments(new Set());
+    setBulkLoading(false);
+    toast({ title: `${selectedPayments.size} results released!` });
+  };
+
   const deleteAssignment = async (id: string) => {
     await supabase.from("assignments").delete().eq("id", id);
     toast({ title: "Assignment deleted" }); fetchAll();
@@ -149,10 +176,10 @@ const AdminDashboard = () => {
   const pendingPayment = assignments.filter(a => a.payment_status === "paid" && !a.admin_released);
 
   const stats = [
-    { label: "Users", value: users.length, icon: Users, color: "text-primary" },
-    { label: "Assignments", value: assignments.length, icon: FileText, color: "text-info" },
-    { label: "Needs Review", value: submittedForReview.length, icon: Clock, color: "text-warn" },
-    { label: "Revenue", value: formatRWF(totalRevenue), icon: TrendingUp, color: "text-primary" },
+    { label: "Users", value: users.length, icon: Users, color: "text-primary", bg: "bg-primary/10" },
+    { label: "Assignments", value: assignments.length, icon: FileText, color: "text-[hsl(var(--info))]", bg: "bg-[hsl(var(--info))]/10" },
+    { label: "Needs Review", value: submittedForReview.length, icon: Clock, color: "text-[hsl(var(--warn))]", bg: "bg-[hsl(var(--warn))]/10" },
+    { label: "Revenue", value: formatRWF(totalRevenue), icon: TrendingUp, color: "text-[hsl(var(--success))]", bg: "bg-[hsl(var(--success))]/10" },
   ];
 
   const tabs = [
@@ -193,21 +220,23 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <StaggerGrid className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {stats.map((s, i) => (
-          <Card key={i} className="border-border animate-fade-in" style={{ boxShadow: "var(--card-shadow)", animationDelay: `${i * 80}ms` }}>
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                <s.icon className={`h-5 w-5 ${s.color}`} />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xl md:text-2xl font-bold font-heading truncate">{s.value}</p>
-                <p className="text-xs text-muted-foreground">{s.label}</p>
-              </div>
-            </CardContent>
-          </Card>
+          <StaggerItem key={i}>
+            <Card className="border-border" style={{ boxShadow: "var(--card-shadow)" }}>
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-xl ${s.bg} flex items-center justify-center shrink-0`}>
+                  <s.icon className={`h-5 w-5 ${s.color}`} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xl md:text-2xl font-bold font-heading truncate">{s.value}</p>
+                  <p className="text-xs text-muted-foreground">{s.label}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </StaggerItem>
         ))}
-      </div>
+      </StaggerGrid>
 
       <div className="flex gap-2 flex-wrap">
         {tabs.map((t) => (
@@ -221,6 +250,7 @@ const AdminDashboard = () => {
       {/* Overview */}
       {tab === "overview" && (
         <div className="space-y-6">
+          <AdminCharts assignments={assignments} profiles={profiles} />
           {submittedForReview.length > 0 && (
             <Card className="border-warn/30" style={{ boxShadow: "var(--card-shadow)" }}>
               <CardHeader><CardTitle className="text-sm font-heading flex items-center gap-2"><Clock className="h-4 w-4 text-warn" /> Needs Your Review ({submittedForReview.length})</CardTitle></CardHeader>
@@ -428,7 +458,14 @@ const AdminDashboard = () => {
       {/* Requests */}
       {tab === "requests" && (
         <Card className="border-border" style={{ boxShadow: "var(--card-shadow)" }}>
-          <CardHeader><CardTitle className="flex items-center gap-2 font-heading"><UserCheck className="h-5 w-5 text-primary" /> Agent Requests</CardTitle></CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="flex items-center gap-2 font-heading"><UserCheck className="h-5 w-5 text-primary" /> Agent Requests</CardTitle>
+            {selectedRequests.size > 0 && (
+              <Button size="sm" className="gold-glow tap-highlight" disabled={bulkLoading} onClick={bulkApproveAgents}>
+                Approve {selectedRequests.size} Selected
+              </Button>
+            )}
+          </CardHeader>
           <CardContent>
             {agentRequests.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">No pending requests.</p>
@@ -440,6 +477,15 @@ const AdminDashboard = () => {
                   return (
                     <div key={req.id} className="flex items-center justify-between py-3 px-3 border border-border/50 rounded-lg">
                       <div className="flex items-center gap-3">
+                        {!hasAgentRole && (
+                          <input type="checkbox" className="h-4 w-4 rounded accent-primary" checked={selectedRequests.has(req.entity_id || req.user_id)}
+                            onChange={(e) => {
+                              const id = req.entity_id || req.user_id;
+                              const next = new Set(selectedRequests);
+                              e.target.checked ? next.add(id) : next.delete(id);
+                              setSelectedRequests(next);
+                            }} />
+                        )}
                         <Avatar className="h-9 w-9">
                           <AvatarImage src={prof?.avatar_url || undefined} />
                           <AvatarFallback className="bg-primary/10 text-primary text-xs">{(prof?.full_name || "U").slice(0, 2).toUpperCase()}</AvatarFallback>
@@ -470,7 +516,16 @@ const AdminDashboard = () => {
       {/* Payments */}
       {tab === "payments" && (
         <Card className="border-border" style={{ boxShadow: "var(--card-shadow)" }}>
-          <CardHeader><CardTitle className="flex items-center gap-2 font-heading"><CreditCard className="h-5 w-5 text-primary" /> Payment Management</CardTitle></CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="flex items-center gap-2 font-heading"><CreditCard className="h-5 w-5 text-primary" /> Payment Management</CardTitle>
+            {selectedPayments.size > 0 && (
+              <ConfirmDialog
+                trigger={<Button size="sm" className="gold-glow tap-highlight" disabled={bulkLoading}>Release {selectedPayments.size} Selected</Button>}
+                title={`Release ${selectedPayments.size} results?`} description="Make sure all payment proofs are verified."
+                onConfirm={bulkReleasePayments} confirmText="Release All"
+              />
+            )}
+          </CardHeader>
           <CardContent>
             {assignments.filter(a => a.payment_status !== "none").length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">No payments yet.</p>
@@ -478,7 +533,11 @@ const AdminDashboard = () => {
               <div className="space-y-3">
                 {assignments.filter(a => a.payment_status !== "none").map(a => (
                   <div key={a.id} className="flex items-center justify-between py-3 px-3 border border-border/50 rounded-lg">
-                    <div>
+                    {a.payment_status === "paid" && !a.admin_released && (
+                      <input type="checkbox" className="h-4 w-4 rounded accent-primary mr-3 shrink-0" checked={selectedPayments.has(a.id)}
+                        onChange={(e) => { const next = new Set(selectedPayments); e.target.checked ? next.add(a.id) : next.delete(a.id); setSelectedPayments(next); }} />
+                    )}
+                    <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium">{a.title}</p>
                       <p className="text-xs text-muted-foreground">Student: {profiles[a.student_id]?.full_name || "—"} · {formatRWF(a.budget)}</p>
                       {a.payment_proof_url && (
@@ -513,7 +572,7 @@ const AdminDashboard = () => {
                 <div key={log.id} className="flex items-center justify-between py-2 border-b border-border/50 last:border-0">
                   <div>
                     <p className="text-sm font-medium capitalize">{log.action.replace(/_/g, " ")}</p>
-                    <p className="text-xs text-muted-foreground">{profiles[log.user_id]?.full_name || "System"} · {new Date(log.created_at).toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground">{profiles[log.user_id]?.full_name || "System"} · {relativeTime(log.created_at)}</p>
                   </div>
                   <Badge variant="outline" className="text-[10px]">{log.entity_type}</Badge>
                 </div>

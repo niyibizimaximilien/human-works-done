@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
 import { LogIn, UserPlus, Eye, EyeOff, Loader2, ArrowLeft, KeyRound } from "lucide-react";
+import PasswordStrength from "@/components/PasswordStrength";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -112,6 +113,7 @@ const Auth = () => {
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
+                {mode === "signup" && <PasswordStrength password={form.password} />}
               </div>
             )}
             {mode === "reset" && (
