@@ -355,12 +355,19 @@ const StudentDashboard = () => {
                   </div>
                   <p className="text-sm text-muted-foreground">Your work is complete! Upload payment proof to receive results.</p>
                   <p className="text-lg font-bold text-primary">{formatRWF(assignment.budget)}</p>
-                  <label className="cursor-pointer">
-                    <input type="file" className="hidden" onChange={(e) => handlePaymentProof(assignment.id, e)} disabled={uploadingProof} accept=".pdf,.jpg,.jpeg,.png,.gif" />
-                    <Button size="sm" className="gold-glow tap-highlight" asChild disabled={uploadingProof}>
-                      <span><Upload className="mr-1.5 h-4 w-4" /> {uploadingProof ? "Uploading..." : "Upload Payment Proof"}</span>
-                    </Button>
-                  </label>
+                  <div className="flex gap-2 flex-wrap">
+                    <label className="cursor-pointer">
+                      <input type="file" className="hidden" onChange={(e) => handlePaymentProof(assignment.id, e)} disabled={uploadingProof} accept=".pdf,.jpg,.jpeg,.png,.gif" />
+                      <Button size="sm" className="gold-glow tap-highlight" asChild disabled={uploadingProof}>
+                        <span><Upload className="mr-1.5 h-4 w-4" /> {uploadingProof ? "Uploading..." : "Upload Payment Proof"}</span>
+                      </Button>
+                    </label>
+                    <HowToPayGuide>
+                      <Button variant="outline" size="sm" className="tap-highlight">
+                        <HelpCircle className="mr-1.5 h-4 w-4" /> How to Pay
+                      </Button>
+                    </HowToPayGuide>
+                  </div>
                 </CardContent>
               </Card>
             )}
