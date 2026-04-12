@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Bell } from "lucide-react";
+import { relativeTime } from "@/lib/relativeTime";
 
 const NotificationsBell = () => {
   const { user } = useAuth();
@@ -99,7 +100,7 @@ const NotificationsBell = () => {
                 onClick={() => handleClick(n)}>
                 <p className="text-sm font-medium">{n.title}</p>
                 <p className="text-xs text-muted-foreground">{n.message}</p>
-                <p className="text-[10px] text-muted-foreground mt-1">{new Date(n.created_at).toLocaleString()}</p>
+                <p className="text-[10px] text-muted-foreground mt-1">{relativeTime(n.created_at)}</p>
               </div>
             ))
           )}
