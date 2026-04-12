@@ -90,7 +90,7 @@ const Onboarding = () => {
           level: form.level,
           avatar_url: avatarUrl || null,
           onboarding_completed: true,
-        } as any)
+        })
         .eq("user_id", user?.id);
       if (error) throw error;
       await refreshProfile();
