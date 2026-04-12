@@ -43,10 +43,10 @@ const HeroSection = () => (
 
 const HowItWorksSection = () => {
   const steps = [
-    { num: "01", title: "Post Assignment", desc: "Upload your brief with deadline and budget. Attach your PDF document.", icon: Upload },
-    { num: "02", title: "Agent Works On It", desc: "A vetted agent picks up your task and starts working immediately.", icon: Briefcase },
-    { num: "03", title: "Admin Reviews", desc: "Completed work goes to admin review for quality assurance.", icon: Shield },
-    { num: "04", title: "Pay & Receive", desc: "After admin approval, pay via mobile money and download your results.", icon: CheckCircle },
+    { num: "01", title: "Post Assignment", desc: "Upload your brief with deadline and budget. Attach your PDF document.", icon: Upload, color: "text-primary", bg: "bg-primary/10 border-primary/20" },
+    { num: "02", title: "Agent Works On It", desc: "A vetted agent picks up your task and starts working immediately.", icon: Briefcase, color: "text-[hsl(var(--warn))]", bg: "bg-[hsl(var(--warn))]/10 border-[hsl(var(--warn))]/20" },
+    { num: "03", title: "Admin Reviews", desc: "Completed work goes to admin review for quality assurance.", icon: Shield, color: "text-[hsl(var(--info))]", bg: "bg-[hsl(var(--info))]/10 border-[hsl(var(--info))]/20" },
+    { num: "04", title: "Pay & Receive", desc: "After admin approval, pay via mobile money and download your results.", icon: CheckCircle, color: "text-[hsl(var(--success))]", bg: "bg-[hsl(var(--success))]/10 border-[hsl(var(--success))]/20" },
   ];
 
   return (
@@ -59,8 +59,8 @@ const HowItWorksSection = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           {steps.map((step, i) => (
             <div key={i} className="relative text-center animate-fade-in" style={{ animationDelay: `${i * 150}ms` }}>
-              <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto mb-4">
-                <step.icon className="h-7 w-7 text-primary" />
+              <div className={`w-14 h-14 rounded-2xl ${step.bg} border flex items-center justify-center mx-auto mb-4`}>
+                <step.icon className={`h-7 w-7 ${step.color}`} />
               </div>
               <span className="text-xs text-primary font-mono font-bold">{step.num}</span>
               <h3 className="font-heading font-semibold mt-1 mb-2">{step.title}</h3>
