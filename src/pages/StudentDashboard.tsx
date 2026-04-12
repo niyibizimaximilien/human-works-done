@@ -76,7 +76,14 @@ const StudentDashboard = () => {
     const channel = supabase
       .channel("student-assignments")
       .on("postgres_changes", { event: "*", schema: "public", table: "assignments", filter: `student_id=eq.${user.id}` },
-        () => { fetchAssignments(); toast({ title: "📋 Assignment updated", description: "An assignment status changed." }); }
+        (payload) => {
+          // Don't toast on own inserts
+          const isOwnInsert = payload.eventType === "INSERT" && (payload.new as any)?.student_id === user.id;
+          fetchAssignments();
+          if (!isOwnInsert) {
+            toast({ title: "📋 Assignment updated", description: "An assignment status changed." });
+          }
+        }
       )
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` },
         () => { playNotificationSound(); }
@@ -247,11 +254,11 @@ const StudentDashboard = () => {
   };
 
   const statusLabel = (a: any) => {
-    if (a.admin_released) return { text: "Completed ✓", cls: "bg-primary/10 text-primary" };
-    if (a.payment_status === "paid") return { text: "Payment Sent", cls: "bg-info/10 text-info" };
-    if (a.payment_status === "pending_payment") return { text: "Pay Now", cls: "bg-warn/10 text-warn" };
-    if (a.status === "submitted") return { text: "Under Review", cls: "bg-info/10 text-info" };
-    if (a.status === "in_progress") return { text: "In Progress", cls: "bg-warn/10 text-warn" };
+    if (a.admin_released) return { text: "Completed ✓", cls: "bg-[hsl(var(--success))]/10 text-[hsl(var(--success))]" };
+    if (a.payment_status === "paid") return { text: "Payment Sent", cls: "bg-[hsl(var(--info))]/10 text-[hsl(var(--info))]" };
+    if (a.payment_status === "pending_payment") return { text: "Pay Now", cls: "bg-[hsl(var(--warn))]/10 text-[hsl(var(--warn))]" };
+    if (a.status === "submitted") return { text: "Under Review", cls: "bg-[hsl(var(--info))]/10 text-[hsl(var(--info))]" };
+    if (a.status === "in_progress") return { text: "In Progress", cls: "bg-[hsl(var(--warn))]/10 text-[hsl(var(--warn))]" };
     if (a.transferred_from) return { text: "Transferred", cls: "bg-muted text-muted-foreground" };
     return { text: a.status.replace(/_/g, " "), cls: "bg-muted text-muted-foreground" };
   };

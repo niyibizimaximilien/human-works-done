@@ -80,19 +80,19 @@ const HowItWorksSection = () => {
 
 const WhatYouGetSection = () => {
   const forStudents = [
-    { icon: Upload, title: "Post Assignments", desc: "Upload details, set deadline & budget. Agents see it instantly." },
-    { icon: Shield, title: "Vetted Agents Only", desc: "Every agent is verified with ID and sample work before approval." },
-    { icon: Lock, title: "Escrow Payments", desc: "Your money is held safely. Released only when you approve the work." },
-    { icon: Clock, title: "Deadline Guarantee", desc: "Get your work on time or get a refund. No excuses." },
-    { icon: MessageCircle, title: "Direct Communication", desc: "Attach additional documents for clarification anytime." },
-    { icon: Star, title: "Rate & Review", desc: "Hold agents accountable with ratings after every delivery." },
+    { icon: Upload, title: "Post Assignments", desc: "Upload details, set deadline & budget. Agents see it instantly.", iconColor: "text-primary", iconBg: "bg-primary/10" },
+    { icon: Shield, title: "Vetted Agents Only", desc: "Every agent is verified with ID and sample work before approval.", iconColor: "text-[hsl(var(--success))]", iconBg: "bg-[hsl(var(--success))]/10" },
+    { icon: Lock, title: "Escrow Payments", desc: "Your money is held safely. Released only when you approve the work.", iconColor: "text-[hsl(var(--warn))]", iconBg: "bg-[hsl(var(--warn))]/10" },
+    { icon: Clock, title: "Deadline Guarantee", desc: "Get your work on time or get a refund. No excuses.", iconColor: "text-secondary", iconBg: "bg-secondary/10" },
+    { icon: MessageCircle, title: "In-App Chat", desc: "Chat directly with your agent inside each assignment. Clarify, attach docs, and track progress in real time.", iconColor: "text-[hsl(var(--info))]", iconBg: "bg-[hsl(var(--info))]/10" },
+    { icon: Star, title: "Rate & Review", desc: "Hold agents accountable with ratings after every delivery.", iconColor: "text-[hsl(var(--warn))]", iconBg: "bg-[hsl(var(--warn))]/10" },
   ];
 
   const forAgents = [
-    { icon: Briefcase, title: "Pick Tasks", desc: "Browse open assignments. Accept the ones that match your skills." },
-    { icon: Sparkles, title: "Earn Per Task", desc: "Get paid in RWF for every completed assignment. Withdraw anytime." },
-    { icon: BadgeCheck, title: "Build Reputation", desc: "High ratings unlock priority access to higher-paying tasks." },
-    { icon: FileText, title: "Deliver Work", desc: "Upload your deliverable. Student reviews and approves payment." },
+    { icon: Briefcase, title: "Pick Tasks", desc: "Browse open assignments. Accept the ones that match your skills.", iconColor: "text-primary", iconBg: "bg-primary/10" },
+    { icon: Sparkles, title: "Earn Per Task", desc: "Get paid in RWF for every completed assignment. Withdraw anytime.", iconColor: "text-[hsl(var(--success))]", iconBg: "bg-[hsl(var(--success))]/10" },
+    { icon: BadgeCheck, title: "Build Reputation", desc: "High ratings unlock priority access to higher-paying tasks.", iconColor: "text-[hsl(var(--warn))]", iconBg: "bg-[hsl(var(--warn))]/10" },
+    { icon: FileText, title: "Deliver Work", desc: "Upload your deliverable. Student reviews and approves payment.", iconColor: "text-[hsl(var(--info))]", iconBg: "bg-[hsl(var(--info))]/10" },
   ];
 
   return (
@@ -149,13 +149,13 @@ const TrustSection = () => (
     <div className="container mx-auto px-4 max-w-4xl">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
         {[
-          { icon: Shield, label: "100% Human Work", sub: "No AI-generated content. Real people, real quality." },
-          { icon: Lock, label: "Escrow Protected", sub: "Funds locked until you approve. Zero risk." },
-          { icon: CheckCircle, label: "Verified Agents", sub: "ID-checked, sample-tested, and trial-approved." },
+          { icon: Shield, label: "100% Human Work", sub: "No AI-generated content. Real people, real quality.", color: "text-[hsl(var(--success))]", bg: "bg-[hsl(var(--success))]/10 border-[hsl(var(--success))]/20" },
+          { icon: Lock, label: "Escrow Protected", sub: "Funds locked until you approve. Zero risk.", color: "text-primary", bg: "bg-primary/10 border-primary/20" },
+          { icon: CheckCircle, label: "Verified Agents", sub: "ID-checked, sample-tested, and trial-approved.", color: "text-[hsl(var(--warn))]", bg: "bg-[hsl(var(--warn))]/10 border-[hsl(var(--warn))]/20" },
         ].map((t, i) => (
           <div key={i} className="flex flex-col items-center gap-3 p-6 animate-fade-in" style={{ animationDelay: `${i * 120}ms` }}>
-            <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
-              <t.icon className="h-7 w-7 text-primary" />
+            <div className={`w-14 h-14 rounded-2xl ${t.bg} border flex items-center justify-center`}>
+              <t.icon className={`h-7 w-7 ${t.color}`} />
             </div>
             <h3 className="font-heading font-semibold text-lg">{t.label}</h3>
             <p className="text-sm text-muted-foreground leading-relaxed">{t.sub}</p>
