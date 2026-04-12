@@ -443,8 +443,15 @@ const StudentDashboard = () => {
                 <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Assignment title" required maxLength={200} className="mt-1" />
               </div>
               <div>
-                <Label className="text-xs">Subject</Label>
-                <Input value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} placeholder="e.g. Physics 201" maxLength={100} className="mt-1" />
+                <Label className="text-xs">Category</Label>
+                <Select value={form.subject} onValueChange={(v) => setForm({ ...form, subject: v })}>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder="Select category..." /></SelectTrigger>
+                  <SelectContent>
+                    {ASSIGNMENT_CATEGORIES.map((cat) => (
+                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="md:col-span-2">
                 <Label className="text-xs">Description</Label>
