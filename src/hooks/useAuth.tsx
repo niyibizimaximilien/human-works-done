@@ -45,6 +45,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (user) await fetchUserData(user.id);
   };
 
+  // Heartbeat: update last_active_at every 2 minutes
+  useEffect(() => {
+    if (!user) return;
+    const updateActivity = () => {
+      supabase.from("profiles").update({ last_active_at: new Date().toISOString() }).eq("user_id", user.id).then(() => {});
+    };
+    updateActivity();
+    const interval = setInterval(updateActivity, 120_000);
+    return () => clearInterval(interval);
+  }, [user]);
+
   useEffect(() => {
     // Set up listener BEFORE getSession to avoid race conditions
     const { data: { subscription } } = supabase.auth.onAuthStateChange(

@@ -557,16 +557,21 @@ const StudentDashboard = () => {
                 <div className="md:col-span-2">
                   <Label className="text-xs mb-2 block">Recommended Agents</Label>
                   <div className="flex gap-3 overflow-x-auto pb-2">
-                    {agents.sort((a, b) => b.avgRating - a.avgRating).slice(0, 4).map(agent => (
+                    {agents.sort((a, b) => b.avgRating - a.avgRating).slice(0, 4).map(agent => {
+                      const isOnline = agent.lastActiveAt && (Date.now() - new Date(agent.lastActiveAt).getTime()) < 300_000;
+                      return (
                       <button key={agent.user_id} type="button"
                         onClick={() => setForm({ ...form, selected_agent: agent.user_id })}
                         className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all shrink-0 tap-highlight ${
                           form.selected_agent === agent.user_id ? "border-primary bg-primary/10" : "border-border hover:border-primary/30"
                         }`}>
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={agent.avatar_url || undefined} />
-                          <AvatarFallback className="bg-primary/10 text-primary text-[10px]">{(agent.full_name || "A").slice(0, 2).toUpperCase()}</AvatarFallback>
-                        </Avatar>
+                        <div className="relative">
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={agent.avatar_url || undefined} />
+                            <AvatarFallback className="bg-primary/10 text-primary text-[10px]">{(agent.full_name || "A").slice(0, 2).toUpperCase()}</AvatarFallback>
+                          </Avatar>
+                          {isOnline && <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-[hsl(var(--success))] border-2 border-background rounded-full" />}
+                        </div>
                         <div className="text-left">
                           <p className="text-xs font-medium">{agent.full_name || "Agent"}</p>
                           <div className="flex items-center gap-1">
@@ -581,7 +586,8 @@ const StudentDashboard = () => {
                           </div>
                         </div>
                       </button>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
