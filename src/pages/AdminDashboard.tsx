@@ -248,6 +248,7 @@ const AdminDashboard = () => {
       {/* Overview */}
       {tab === "overview" && (
         <div className="space-y-6">
+          <AdminCharts assignments={assignments} profiles={profiles} />
           {submittedForReview.length > 0 && (
             <Card className="border-warn/30" style={{ boxShadow: "var(--card-shadow)" }}>
               <CardHeader><CardTitle className="text-sm font-heading flex items-center gap-2"><Clock className="h-4 w-4 text-warn" /> Needs Your Review ({submittedForReview.length})</CardTitle></CardHeader>
