@@ -6,6 +6,54 @@
 
 @layer base {
   :root {
+    --background: 40 20% 97%;
+    --foreground: 0 0% 8%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 8%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 8%;
+
+    --primary: 43 72% 53%;
+    --primary-foreground: 0 0% 5%;
+
+    --secondary: 40 10% 93%;
+    --secondary-foreground: 0 0% 20%;
+
+    --muted: 40 10% 90%;
+    --muted-foreground: 0 0% 40%;
+
+    --accent: 43 72% 48%;
+    --accent-foreground: 0 0% 5%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 40 10% 88%;
+    --input: 40 10% 88%;
+    --ring: 43 72% 53%;
+
+    --radius: 0.75rem;
+
+    --warn: 38 92% 50%;
+    --info: 217 91% 60%;
+
+    --sidebar-background: 40 15% 96%;
+    --sidebar-foreground: 0 0% 8%;
+    --sidebar-primary: 43 72% 53%;
+    --sidebar-primary-foreground: 0 0% 5%;
+    --sidebar-accent: 40 10% 92%;
+    --sidebar-accent-foreground: 0 0% 20%;
+    --sidebar-border: 40 10% 88%;
+    --sidebar-ring: 43 72% 53%;
+
+    --gold-glow: 0 0 12px hsla(43, 72%, 53%, 0.18);
+    --gold-glow-strong: 0 0 24px hsla(43, 72%, 53%, 0.3);
+    --card-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  }
+
+  .dark {
     --background: 0 0% 5%;
     --foreground: 40 20% 92%;
 
@@ -33,11 +81,6 @@
     --border: 0 0% 16%;
     --input: 0 0% 16%;
     --ring: 43 72% 53%;
-
-    --radius: 0.75rem;
-
-    --warn: 38 92% 50%;
-    --info: 217 91% 60%;
 
     --sidebar-background: 0 0% 4%;
     --sidebar-foreground: 40 20% 92%;
@@ -72,6 +115,10 @@
 @layer utilities {
   .gold-glow {
     box-shadow: var(--gold-glow);
+    transition: box-shadow 0.3s ease;
+  }
+  .gold-glow:hover {
+    box-shadow: var(--gold-glow-strong);
   }
   .gold-glow-strong {
     box-shadow: var(--gold-glow-strong);
@@ -85,7 +132,15 @@
   }
   .card-hover:hover {
     transform: translateY(-4px);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15), 0 0 20px hsla(43, 72%, 53%, 0.08);
+  }
+  .dark .card-hover:hover {
     box-shadow: 0 12px 30px rgba(0, 0, 0, 0.8), 0 0 20px hsla(43, 72%, 53%, 0.1);
+  }
+
+  /* Haptic feedback on mobile taps */
+  .tap-highlight {
+    @apply active:scale-[0.97] transition-transform duration-100;
   }
 
   /* Page transition */
@@ -94,19 +149,18 @@
   }
 
   @keyframes pageIn {
-    from {
-      opacity: 0;
-      transform: translateY(12px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 
   /* Safe area for mobile bottom bar */
   .safe-area-bottom {
     padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* Smooth scroll for anchor links */
+  html {
+    scroll-behavior: smooth;
   }
 }
 
@@ -115,10 +169,10 @@
   width: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: hsl(0, 0%, 6%);
+  background: hsl(var(--muted));
 }
 ::-webkit-scrollbar-thumb {
-  background: hsl(0, 0%, 20%);
+  background: hsl(var(--border));
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
