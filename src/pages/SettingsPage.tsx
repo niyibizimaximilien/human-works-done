@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "@/hooks/use-toast";
 import { Save, User, Shield, Camera, Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { PWAInstallSection } from "@/components/PWAInstallPrompt";
 
 const SettingsPage = () => {
   const { user, profile, role, refreshProfile } = useAuth();
@@ -158,6 +159,9 @@ const SettingsPage = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* PWA Install Section */}
+      <PWAInstallSection />
     </div>
   );
 };
