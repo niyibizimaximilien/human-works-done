@@ -4,18 +4,22 @@
   "description": "Get your assignments done by vetted agents. Post, pay, and receive — all in one place.",
   "start_url": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#121620",
   "theme_color": "#2563EB",
+  "categories": ["education", "productivity"],
   "icons": [
     {
       "src": "/favicon.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
       "src": "/favicon.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }
