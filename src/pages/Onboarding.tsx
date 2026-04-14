@@ -9,9 +9,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "@/hooks/use-toast";
-import { User, School, CheckCircle, ArrowRight, ArrowLeft, Camera, Loader2 } from "lucide-react";
+import { User, School, CheckCircle, ArrowRight, ArrowLeft, Camera, Loader2, AtSign } from "lucide-react";
 
-const steps = ["Personal Info", "University", "Complete"];
+const steps = ["Identity", "University", "Complete"];
 
 const Onboarding = () => {
   const navigate = useNavigate();
@@ -19,8 +19,11 @@ const Onboarding = () => {
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [checkingNickname, setCheckingNickname] = useState(false);
+  const [nicknameAvailable, setNicknameAvailable] = useState<boolean | null>(null);
   const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url || "");
   const [form, setForm] = useState({
+    nickname: "",
     full_name: "",
     phone: "",
     student_id_number: "",
@@ -51,7 +54,35 @@ const Onboarding = () => {
     setUploading(false);
   };
 
+  const checkNickname = async (nickname: string) => {
+    if (!nickname.trim() || nickname.length < 3) {
+      setNicknameAvailable(null);
+      return;
+    }
+    setCheckingNickname(true);
+    const { data } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("nickname", nickname.trim().toLowerCase())
+      .neq("user_id", user!.id)
+      .limit(1);
+    setNicknameAvailable(!data || data.length === 0);
+    setCheckingNickname(false);
+  };
+
   const validateStep0 = () => {
+    if (!form.nickname.trim() || form.nickname.length < 3) {
+      toast({ title: "Nickname required", description: "Choose a unique nickname (min 3 characters).", variant: "destructive" });
+      return false;
+    }
+    if (!/^[a-zA-Z0-9_]+$/.test(form.nickname.trim())) {
+      toast({ title: "Invalid nickname", description: "Only letters, numbers, and underscores allowed.", variant: "destructive" });
+      return false;
+    }
+    if (nicknameAvailable === false) {
+      toast({ title: "Nickname taken", description: "Please choose a different nickname.", variant: "destructive" });
+      return false;
+    }
     if (!form.full_name.trim()) {
       toast({ title: "Name required", description: "Please enter your full name.", variant: "destructive" });
       return false;
@@ -82,6 +113,7 @@ const Onboarding = () => {
       const { error } = await supabase
         .from("profiles")
         .update({
+          nickname: form.nickname.trim().toLowerCase(),
           full_name: form.full_name,
           phone: form.phone,
           student_id_number: form.student_id_number,
@@ -139,17 +171,40 @@ const Onboarding = () => {
                 </div>
               </div>
               <p className="text-xs text-muted-foreground text-center">Upload a profile photo (required)</p>
+
               <div>
-                <Label className="text-xs">Full Name *</Label>
+                <Label className="text-xs flex items-center gap-1"><AtSign className="h-3 w-3" /> Nickname *</Label>
+                <Input
+                  value={form.nickname}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^a-zA-Z0-9_]/g, "");
+                    setForm({ ...form, nickname: val });
+                    setNicknameAvailable(null);
+                  }}
+                  onBlur={() => checkNickname(form.nickname)}
+                  placeholder="cool_student_23"
+                  maxLength={30}
+                  className="mt-1"
+                />
+                <div className="flex items-center gap-1 mt-1">
+                  {checkingNickname && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+                  {nicknameAvailable === true && <span className="text-[10px] text-[hsl(var(--success))]">✓ Available</span>}
+                  {nicknameAvailable === false && <span className="text-[10px] text-destructive">✗ Already taken</span>}
+                  {nicknameAvailable === null && <span className="text-[10px] text-muted-foreground">Letters, numbers, underscores only. This is your public identity.</span>}
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-xs">Full Name * <span className="text-muted-foreground">(private — only visible to admins)</span></Label>
                 <Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} placeholder="John Doe" maxLength={100} className="mt-1" />
               </div>
               <div>
-                <Label className="text-xs">Student ID *</Label>
+                <Label className="text-xs">Student ID * <span className="text-muted-foreground">(private)</span></Label>
                 <Input value={form.student_id_number} onChange={(e) => setForm({ ...form, student_id_number: e.target.value })} placeholder="22XXXXXXX" maxLength={9} className="mt-1" />
                 <p className="text-[10px] text-muted-foreground mt-1">Format: 22 followed by 7 digits</p>
               </div>
               <div>
-                <Label className="text-xs">Phone Number</Label>
+                <Label className="text-xs">Phone Number <span className="text-muted-foreground">(private)</span></Label>
                 <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+250..." maxLength={20} className="mt-1" />
               </div>
             </div>
@@ -174,7 +229,8 @@ const Onboarding = () => {
             <div className="text-center py-6 animate-fade-in">
               <CheckCircle className="h-16 w-16 text-primary mx-auto mb-4" />
               <h3 className="text-lg font-heading font-semibold mb-2">You're all set!</h3>
-              <p className="text-sm text-muted-foreground">Your profile is ready. You can update details later in settings.</p>
+              <p className="text-sm text-muted-foreground">Your public identity is <span className="font-semibold text-primary">@{form.nickname || "..."}</span></p>
+              <p className="text-xs text-muted-foreground mt-1">Real name and personal info are private. You can update details later in settings.</p>
             </div>
           )}
           <div className="flex gap-3 pt-2">
