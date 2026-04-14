@@ -139,6 +139,7 @@ const StudentDashboard = () => {
         const onTimeRate = ar.length > 0 ? (ar.filter(r => r.on_time).length / ar.length) * 100 : 0;
         return {
           user_id: p.user_id,
+          nickname: p.nickname,
           full_name: p.full_name,
           avatar_url: p.avatar_url,
           university: p.university,
