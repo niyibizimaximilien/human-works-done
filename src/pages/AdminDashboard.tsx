@@ -31,7 +31,8 @@ const AdminDashboard = () => {
   const [assignments, setAssignments] = useState<any[]>([]);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [agentRequests, setAgentRequests] = useState<any[]>([]);
-  const [tab, setTab] = useState<"overview" | "users" | "assignments" | "audit" | "requests" | "payments">("overview");
+  const [disputes, setDisputes] = useState<any[]>([]);
+  const [tab, setTab] = useState<"overview" | "users" | "assignments" | "audit" | "requests" | "payments" | "disputes">("overview");
   const [searchQuery, setSearchQuery] = useState("");
   const [profiles, setProfiles] = useState<Record<string, any>>({});
   const [fetching, setFetching] = useState(true);
