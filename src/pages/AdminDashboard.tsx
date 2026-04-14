@@ -569,7 +569,93 @@ const AdminDashboard = () => {
         </Card>
       )}
 
-      {/* Audit */}
+      {/* Disputes */}
+      {tab === "disputes" && (
+        <Card className="border-border" style={{ boxShadow: "var(--card-shadow)" }}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 font-heading">
+              <AlertTriangle className="h-5 w-5 text-destructive" /> Dispute Resolution
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {disputes.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">No disputes.</p>
+            ) : (
+              <div className="space-y-4">
+                {disputes.map(d => {
+                  const assignment = assignments.find(a => a.id === d.assignment_id);
+                  const opener = profiles[d.opened_by];
+                  return (
+                    <div key={d.id} className="border border-border rounded-lg p-4 space-y-3">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="text-sm font-medium">{assignment?.title || "Unknown Assignment"}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Opened by: {opener?.nickname ? `@${opener.nickname}` : (opener?.full_name || "Unknown")} · {relativeTime(d.created_at)}
+                          </p>
+                        </div>
+                        <Badge variant={d.status === "open" ? "destructive" : d.status === "under_review" ? "secondary" : "outline"} className="text-[10px] capitalize">
+                          {d.status.replace(/_/g, " ")}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground bg-muted/50 p-2 rounded">{d.reason}</p>
+                      {d.evidence_url && (
+                        <a href={d.evidence_url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline">View Evidence ↗</a>
+                      )}
+                      {(d.status === "open" || d.status === "under_review") && (
+                        <div className="flex gap-2 flex-wrap">
+                          <ConfirmDialog
+                            trigger={<Button size="sm" className="gold-glow tap-highlight">Release Full Payment</Button>}
+                            title="Release full payment to agent?"
+                            description="This resolves the dispute in favor of the agent. Full payment will be released."
+                            onConfirm={async () => {
+                              await supabase.from("disputes").update({ status: "resolved_full", resolved_at: new Date().toISOString() }).eq("id", d.id);
+                              await supabase.from("assignments").update({ escrow_status: "released" }).eq("id", d.assignment_id);
+                              if (assignment) {
+                                await supabase.from("assignments").update({ admin_released: true, status: "completed", reviewed_at: new Date().toISOString() }).eq("id", d.assignment_id);
+                              }
+                              toast({ title: "Dispute resolved — full payment released" });
+                              fetchAll();
+                            }}
+                            confirmText="Release"
+                          />
+                          <ConfirmDialog
+                            trigger={<Button size="sm" variant="outline">Refund Student</Button>}
+                            title="Refund student?"
+                            description="This resolves the dispute in favor of the student. Agent will not be paid."
+                            onConfirm={async () => {
+                              await supabase.from("disputes").update({ status: "rejected", resolved_at: new Date().toISOString() }).eq("id", d.id);
+                              await supabase.from("assignments").update({ escrow_status: "refunded", payment_status: "none" }).eq("id", d.assignment_id);
+                              if (assignment?.student_id) {
+                                await supabase.from("notifications").insert({ user_id: assignment.student_id, title: "Dispute Resolved ✅", message: "Your dispute has been resolved. A refund will be processed.", link: "/dashboard" });
+                              }
+                              toast({ title: "Dispute resolved — student refunded" });
+                              fetchAll();
+                            }}
+                            confirmText="Refund"
+                            variant="destructive"
+                          />
+                          {d.status === "open" && (
+                            <Button size="sm" variant="outline" onClick={async () => {
+                              await supabase.from("disputes").update({ status: "under_review" }).eq("id", d.id);
+                              toast({ title: "Marked as under review" });
+                              fetchAll();
+                            }}>Mark Under Review</Button>
+                          )}
+                        </div>
+                      )}
+                      {d.admin_notes && (
+                        <p className="text-xs text-muted-foreground">Admin notes: {d.admin_notes}</p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {tab === "audit" && (
         <Card className="border-border" style={{ boxShadow: "var(--card-shadow)" }}>
           <CardHeader><CardTitle className="flex items-center gap-2 font-heading"><ScrollText className="h-5 w-5 text-primary" /> Audit Log</CardTitle></CardHeader>
