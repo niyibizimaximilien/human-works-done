@@ -367,8 +367,8 @@ const AdminDashboard = () => {
                             <AvatarFallback className="bg-primary/10 text-primary text-[10px]">{(u.full_name || "U").slice(0, 2).toUpperCase()}</AvatarFallback>
                           </Avatar>
                           <div>
-                            <span className="font-medium">{u.full_name || "—"}</span>
-                            <p className="text-xs text-muted-foreground">{u.university || "—"}</p>
+                            <span className="font-medium">{u.nickname ? `@${u.nickname}` : (u.full_name || "—")}</span>
+                            <p className="text-xs text-muted-foreground">{u.full_name || "—"} · {u.university || "—"}</p>
                           </div>
                         </div>
                       </td>
