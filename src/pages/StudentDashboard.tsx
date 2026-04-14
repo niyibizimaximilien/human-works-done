@@ -341,9 +341,18 @@ const StudentDashboard = () => {
 
             <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
               <DeadlineCountdown deadline={assignment.deadline} />
-              {assignment.budget && <span className="text-primary font-semibold">{formatRWF(assignment.budget)}</span>}
               {assignment.sla_tier !== "standard" && <Badge variant="outline" className="uppercase text-[10px]">{assignment.sla_tier}</Badge>}
+              {assignment.escrow_status && assignment.escrow_status !== "none" && (
+                <Badge variant="outline" className="text-[10px] capitalize">{assignment.escrow_status === "held" ? "💰 Escrow Held" : assignment.escrow_status === "released" ? "✅ Released" : assignment.escrow_status === "disputed" ? "⚠️ Disputed" : assignment.escrow_status}</Badge>
+              )}
             </div>
+
+            <BudgetBreakdown
+              materialCost={assignment.material_cost}
+              serviceFee={assignment.service_fee}
+              platformFee={assignment.platform_fee}
+              totalBudget={assignment.budget}
+            />
 
             {assignment.transferred_from && (
               <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 px-3 py-2 rounded-lg">
