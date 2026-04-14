@@ -390,6 +390,14 @@ const StudentDashboard = () => {
               </ReviewDialog>
             )}
 
+            {assignment.status === "submitted" && !assignment.admin_released && assignment.escrow_status !== "disputed" && (
+              <DisputeDialog assignmentId={assignment.id} onDisputeCreated={fetchAssignments}>
+                <Button variant="outline" size="sm" className="w-full text-destructive hover:text-destructive tap-highlight">
+                  <AlertTriangle className="mr-2 h-4 w-4" /> Open Dispute
+                </Button>
+              </DisputeDialog>
+            )}
+
             {assignment.payment_status === "pending_payment" && !assignment.admin_released && (
               <Card className="border-primary/30 bg-primary/5">
                 <CardContent className="p-4 space-y-3">
