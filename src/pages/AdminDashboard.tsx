@@ -65,17 +65,19 @@ const AdminDashboard = () => {
   };
 
   const fetchAll = async () => {
-    const [{ data: profs }, { data: rls }, { data: asns }, { data: logs }] = await Promise.all([
+    const [{ data: profs }, { data: rls }, { data: asns }, { data: logs }, { data: disps }] = await Promise.all([
       supabase.from("profiles").select("*").order("created_at", { ascending: false }),
       supabase.from("user_roles").select("*"),
       supabase.from("assignments").select("*").order("created_at", { ascending: false }),
       supabase.from("audit_logs").select("*").order("created_at", { ascending: false }).limit(200),
+      supabase.from("disputes").select("*").order("created_at", { ascending: false }),
     ]);
     setUsers(profs || []);
     setRoles(rls || []);
     setAssignments(asns || []);
     setAuditLogs(logs || []);
     setAgentRequests((logs || []).filter(l => l.action === "agent_request"));
+    setDisputes(disps || []);
     const map: Record<string, any> = {};
     (profs || []).forEach(p => { map[p.user_id] = p; });
     setProfiles(map);
