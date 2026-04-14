@@ -22,6 +22,20 @@ const ProtectedRoute = ({ children, requireOnboarding = true }: ProtectedRoutePr
 
   if (!user) return <Navigate to="/auth" replace />;
 
+  if ((profile as any)?.is_banned) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="text-center space-y-3 max-w-md">
+          <div className="text-4xl">🚫</div>
+          <h2 className="text-xl font-heading font-bold">Account Suspended</h2>
+          <p className="text-sm text-muted-foreground">
+            Your account has been suspended. {(profile as any)?.ban_reason ? `Reason: ${(profile as any).ban_reason}` : "Contact support for more information."}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   if (requireOnboarding && profile && !profile.onboarding_completed) {
     return <Navigate to="/onboarding" replace />;
   }
