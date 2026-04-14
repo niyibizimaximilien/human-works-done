@@ -4,10 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "@/hooks/use-toast";
-import { Save, User, Shield, Camera, Loader2 } from "lucide-react";
+import { Save, User, Shield, Camera, Loader2, AtSign } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { PWAInstallSection } from "@/components/PWAInstallPrompt";
 
@@ -15,7 +15,10 @@ const SettingsPage = () => {
   const { user, profile, role, refreshProfile } = useAuth();
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [checkingNickname, setCheckingNickname] = useState(false);
+  const [nicknameAvailable, setNicknameAvailable] = useState<boolean | null>(null);
   const [form, setForm] = useState({
+    nickname: profile?.nickname || "",
     full_name: profile?.full_name || "",
     phone: profile?.phone || "",
     student_id_number: profile?.student_id_number || "",
@@ -23,6 +26,25 @@ const SettingsPage = () => {
     department: profile?.department || "",
     level: profile?.level || "",
   });
+
+  const canChangeNickname = !profile?.nickname_changed_at ||
+    (Date.now() - new Date(profile.nickname_changed_at).getTime()) > 30 * 24 * 60 * 60 * 1000;
+
+  const checkNickname = async (nickname: string) => {
+    if (!nickname.trim() || nickname.length < 3) {
+      setNicknameAvailable(null);
+      return;
+    }
+    setCheckingNickname(true);
+    const { data } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("nickname", nickname.trim().toLowerCase())
+      .neq("user_id", user!.id)
+      .limit(1);
+    setNicknameAvailable(!data || data.length === 0);
+    setCheckingNickname(false);
+  };
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -51,9 +73,23 @@ const SettingsPage = () => {
       toast({ title: "Invalid Student ID", description: "Must start with 22 followed by 7 digits.", variant: "destructive" });
       return;
     }
+    if (form.nickname && !/^[a-zA-Z0-9_]+$/.test(form.nickname)) {
+      toast({ title: "Invalid nickname", description: "Only letters, numbers, and underscores.", variant: "destructive" });
+      return;
+    }
+    if (nicknameAvailable === false) {
+      toast({ title: "Nickname taken", variant: "destructive" });
+      return;
+    }
     setLoading(true);
     try {
-      const { error } = await supabase.from("profiles").update(form).eq("user_id", user!.id);
+      const updateData: any = { ...form };
+      // Track nickname change
+      if (form.nickname !== (profile?.nickname || "") && form.nickname.trim()) {
+        updateData.nickname = form.nickname.trim().toLowerCase();
+        updateData.nickname_changed_at = new Date().toISOString();
+      }
+      const { error } = await supabase.from("profiles").update(updateData).eq("user_id", user!.id);
       if (error) throw error;
       await refreshProfile();
       toast({ title: "Settings saved!" });
@@ -65,7 +101,8 @@ const SettingsPage = () => {
     }
   };
 
-  const initials = (profile?.full_name || user?.email || "U")
+  const displayName = profile?.nickname ? `@${profile.nickname}` : (profile?.full_name || user?.email || "U");
+  const initials = (profile?.nickname || profile?.full_name || user?.email || "U")
     .split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase();
 
   return (
@@ -88,7 +125,7 @@ const SettingsPage = () => {
             </label>
           </div>
           <div>
-            <h3 className="font-heading font-semibold">{profile?.full_name || "Set your name"}</h3>
+            <h3 className="font-heading font-semibold">{displayName}</h3>
             <p className="text-sm text-muted-foreground">{user?.email}</p>
             <p className="text-xs text-muted-foreground mt-1 capitalize">Role: {role || "student"}</p>
           </div>
@@ -105,16 +142,37 @@ const SettingsPage = () => {
           <form onSubmit={handleSave} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label className="text-xs">Full Name *</Label>
+                <Label className="text-xs flex items-center gap-1"><AtSign className="h-3 w-3" /> Nickname (public)</Label>
+                <Input
+                  value={form.nickname}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^a-zA-Z0-9_]/g, "");
+                    setForm({ ...form, nickname: val });
+                    setNicknameAvailable(null);
+                  }}
+                  onBlur={() => checkNickname(form.nickname)}
+                  maxLength={30}
+                  className="mt-1"
+                  disabled={!canChangeNickname}
+                />
+                <div className="flex items-center gap-1 mt-1">
+                  {checkingNickname && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+                  {nicknameAvailable === true && <span className="text-[10px] text-[hsl(var(--success))]">✓ Available</span>}
+                  {nicknameAvailable === false && <span className="text-[10px] text-destructive">✗ Taken</span>}
+                  {!canChangeNickname && <span className="text-[10px] text-muted-foreground">Can change once every 30 days</span>}
+                </div>
+              </div>
+              <div>
+                <Label className="text-xs">Full Name * <span className="text-muted-foreground">(private)</span></Label>
                 <Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} maxLength={100} className="mt-1" />
               </div>
               <div>
-                <Label className="text-xs">Student ID *</Label>
+                <Label className="text-xs">Student ID * <span className="text-muted-foreground">(private)</span></Label>
                 <Input value={form.student_id_number} onChange={(e) => setForm({ ...form, student_id_number: e.target.value })} placeholder="22XXXXXXX" maxLength={9} className="mt-1" />
                 <p className="text-[10px] text-muted-foreground mt-1">Format: 22 + 7 digits</p>
               </div>
               <div>
-                <Label className="text-xs">Phone</Label>
+                <Label className="text-xs">Phone <span className="text-muted-foreground">(private)</span></Label>
                 <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} maxLength={20} className="mt-1" />
               </div>
               <div>
@@ -160,7 +218,6 @@ const SettingsPage = () => {
         </CardContent>
       </Card>
 
-      {/* PWA Install Section */}
       <PWAInstallSection />
     </div>
   );
