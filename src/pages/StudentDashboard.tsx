@@ -327,10 +327,10 @@ const StudentDashboard = () => {
                 <button className="flex items-center gap-2 p-2 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors w-full text-left tap-highlight">
                   <Avatar className="h-8 w-8">
                     <AvatarImage src={agentProfile.avatar_url || undefined} />
-                    <AvatarFallback className="bg-primary/10 text-primary text-[10px]">{(agentProfile.full_name || "A").slice(0, 2).toUpperCase()}</AvatarFallback>
+                    <AvatarFallback className="bg-primary/10 text-primary text-[10px]">{(agentProfile.nickname || agentProfile.full_name || "A").slice(0, 2).toUpperCase()}</AvatarFallback>
                   </Avatar>
                   <div className="min-w-0">
-                    <p className="text-xs font-medium">{agentProfile.full_name || "Agent"}</p>
+                    <p className="text-xs font-medium">{agentProfile.nickname ? `@${agentProfile.nickname}` : (agentProfile.full_name || "Agent")}</p>
                     <p className="text-[10px] text-muted-foreground">Tap to view profile</p>
                   </div>
                 </button>
