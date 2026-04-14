@@ -43,6 +43,7 @@ const PAGE_SIZE = 10;
 
 interface AgentInfo {
   user_id: string;
+  nickname: string | null;
   full_name: string | null;
   avatar_url: string | null;
   university: string | null;
