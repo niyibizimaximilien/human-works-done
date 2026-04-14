@@ -186,10 +186,13 @@ const AdminDashboard = () => {
     { label: "Revenue", value: formatRWF(totalRevenue), icon: TrendingUp, color: "text-[hsl(var(--success))]", bg: "bg-[hsl(var(--success))]/10" },
   ];
 
+  const openDisputes = disputes.filter(d => d.status === "open" || d.status === "under_review");
+
   const tabs = [
     { key: "overview", label: "Overview", icon: TrendingUp },
     { key: "users", label: "Users", icon: Users },
     { key: "assignments", label: "Assignments", icon: FileText },
+    { key: "disputes", label: `Disputes (${openDisputes.length})`, icon: AlertTriangle },
     { key: "requests", label: `Requests (${agentRequests.length})`, icon: UserCheck },
     { key: "payments", label: `Payments (${pendingPayment.length})`, icon: CreditCard },
     { key: "audit", label: "Audit", icon: ScrollText },
