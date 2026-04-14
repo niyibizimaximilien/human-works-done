@@ -551,8 +551,9 @@ const StudentDashboard = () => {
                 <Input type="datetime-local" value={form.deadline} onChange={(e) => setForm({ ...form, deadline: e.target.value })} required className="mt-1" />
               </div>
               <div>
-                <Label className="text-xs">Budget (RWF)</Label>
-                <Input type="number" value={form.budget} onChange={(e) => setForm({ ...form, budget: e.target.value })} placeholder="5000" min="0" className="mt-1" />
+                <Label className="text-xs">Budget (RWF) *</Label>
+                <Input type="number" value={form.budget} onChange={(e) => setForm({ ...form, budget: e.target.value })} placeholder="5000" min="0" required className="mt-1" />
+                <p className="text-[10px] text-muted-foreground mt-1">💡 Higher budgets attract faster responses from agents</p>
               </div>
               <div>
                 <Label className="text-xs">SLA Tier</Label>
