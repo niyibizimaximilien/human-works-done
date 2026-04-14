@@ -26,6 +26,8 @@ import ReviewDialog from "@/components/ReviewDialog";
 import AgentProfileDialog from "@/components/AgentProfileDialog";
 import EmptyState from "@/components/EmptyState";
 import AssignmentChat from "@/components/AssignmentChat";
+import DisputeDialog from "@/components/DisputeDialog";
+import BudgetBreakdown from "@/components/BudgetBreakdown";
 import { PageTransition, StaggerGrid, StaggerItem } from "@/components/MotionWrappers";
 import { StatsSkeleton, CardListSkeleton } from "@/components/DashboardSkeleton";
 import useUnsavedChangesWarning from "@/hooks/useUnsavedChangesWarning";
