@@ -7,12 +7,13 @@ import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Textarea } from "@/components/ui/textarea";
 import { formatRWF } from "@/lib/contactFilter";
 import {
   Users, FileText, TrendingUp, Trash2, UserCheck,
   Search, Eye, Clock, CheckCircle,
   ScrollText, CreditCard, Download, Send, Unlock,
-  ArrowRightLeft, Copy, FileDown
+  ArrowRightLeft, Copy, FileDown, AlertTriangle
 } from "lucide-react";
 import ConfirmDialog from "@/components/ui/alert-dialog-confirm";
 import TransferDialog from "@/components/TransferDialog";
