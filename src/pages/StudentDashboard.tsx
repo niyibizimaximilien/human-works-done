@@ -26,6 +26,8 @@ import ReviewDialog from "@/components/ReviewDialog";
 import AgentProfileDialog from "@/components/AgentProfileDialog";
 import EmptyState from "@/components/EmptyState";
 import AssignmentChat from "@/components/AssignmentChat";
+import DisputeDialog from "@/components/DisputeDialog";
+import BudgetBreakdown from "@/components/BudgetBreakdown";
 import { PageTransition, StaggerGrid, StaggerItem } from "@/components/MotionWrappers";
 import { StatsSkeleton, CardListSkeleton } from "@/components/DashboardSkeleton";
 import useUnsavedChangesWarning from "@/hooks/useUnsavedChangesWarning";
@@ -41,6 +43,7 @@ const PAGE_SIZE = 10;
 
 interface AgentInfo {
   user_id: string;
+  nickname: string | null;
   full_name: string | null;
   avatar_url: string | null;
   university: string | null;
@@ -136,6 +139,7 @@ const StudentDashboard = () => {
         const onTimeRate = ar.length > 0 ? (ar.filter(r => r.on_time).length / ar.length) * 100 : 0;
         return {
           user_id: p.user_id,
+          nickname: p.nickname,
           full_name: p.full_name,
           avatar_url: p.avatar_url,
           university: p.university,
@@ -323,10 +327,10 @@ const StudentDashboard = () => {
                 <button className="flex items-center gap-2 p-2 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors w-full text-left tap-highlight">
                   <Avatar className="h-8 w-8">
                     <AvatarImage src={agentProfile.avatar_url || undefined} />
-                    <AvatarFallback className="bg-primary/10 text-primary text-[10px]">{(agentProfile.full_name || "A").slice(0, 2).toUpperCase()}</AvatarFallback>
+                    <AvatarFallback className="bg-primary/10 text-primary text-[10px]">{(agentProfile.nickname || agentProfile.full_name || "A").slice(0, 2).toUpperCase()}</AvatarFallback>
                   </Avatar>
                   <div className="min-w-0">
-                    <p className="text-xs font-medium">{agentProfile.full_name || "Agent"}</p>
+                    <p className="text-xs font-medium">{agentProfile.nickname ? `@${agentProfile.nickname}` : (agentProfile.full_name || "Agent")}</p>
                     <p className="text-[10px] text-muted-foreground">Tap to view profile</p>
                   </div>
                 </button>
@@ -337,9 +341,18 @@ const StudentDashboard = () => {
 
             <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
               <DeadlineCountdown deadline={assignment.deadline} />
-              {assignment.budget && <span className="text-primary font-semibold">{formatRWF(assignment.budget)}</span>}
               {assignment.sla_tier !== "standard" && <Badge variant="outline" className="uppercase text-[10px]">{assignment.sla_tier}</Badge>}
+              {assignment.escrow_status && assignment.escrow_status !== "none" && (
+                <Badge variant="outline" className="text-[10px] capitalize">{assignment.escrow_status === "held" ? "💰 Escrow Held" : assignment.escrow_status === "released" ? "✅ Released" : assignment.escrow_status === "disputed" ? "⚠️ Disputed" : assignment.escrow_status}</Badge>
+              )}
             </div>
+
+            <BudgetBreakdown
+              materialCost={assignment.material_cost}
+              serviceFee={assignment.service_fee}
+              platformFee={assignment.platform_fee}
+              totalBudget={assignment.budget}
+            />
 
             {assignment.transferred_from && (
               <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 px-3 py-2 rounded-lg">
@@ -375,6 +388,14 @@ const StudentDashboard = () => {
                   <Star className="mr-2 h-4 w-4" /> Rate this Agent
                 </Button>
               </ReviewDialog>
+            )}
+
+            {assignment.status === "submitted" && !assignment.admin_released && assignment.escrow_status !== "disputed" && (
+              <DisputeDialog assignmentId={assignment.id} onDisputeCreated={fetchAssignments}>
+                <Button variant="outline" size="sm" className="w-full text-destructive hover:text-destructive tap-highlight">
+                  <AlertTriangle className="mr-2 h-4 w-4" /> Open Dispute
+                </Button>
+              </DisputeDialog>
             )}
 
             {assignment.payment_status === "pending_payment" && !assignment.admin_released && (
@@ -530,8 +551,9 @@ const StudentDashboard = () => {
                 <Input type="datetime-local" value={form.deadline} onChange={(e) => setForm({ ...form, deadline: e.target.value })} required className="mt-1" />
               </div>
               <div>
-                <Label className="text-xs">Budget (RWF)</Label>
-                <Input type="number" value={form.budget} onChange={(e) => setForm({ ...form, budget: e.target.value })} placeholder="5000" min="0" className="mt-1" />
+                <Label className="text-xs">Budget (RWF) *</Label>
+                <Input type="number" value={form.budget} onChange={(e) => setForm({ ...form, budget: e.target.value })} placeholder="5000" min="0" required className="mt-1" />
+                <p className="text-[10px] text-muted-foreground mt-1">💡 Higher budgets attract faster responses from agents</p>
               </div>
               <div>
                 <Label className="text-xs">SLA Tier</Label>
@@ -552,7 +574,7 @@ const StudentDashboard = () => {
                     {agents.map((agent) => (
                       <SelectItem key={agent.user_id} value={agent.user_id}>
                         <div className="flex items-center gap-2">
-                          <span>{agent.full_name || "Agent"}</span>
+                          <span>{agent.nickname ? `@${agent.nickname}` : (agent.full_name || "Agent")}</span>
                           {agent.reviewCount > 0 && <span className="text-[10px] text-muted-foreground">⭐ {agent.avgRating} ({agent.reviewCount})</span>}
                         </div>
                       </SelectItem>
@@ -576,12 +598,12 @@ const StudentDashboard = () => {
                         <div className="relative">
                           <Avatar className="h-8 w-8">
                             <AvatarImage src={agent.avatar_url || undefined} />
-                            <AvatarFallback className="bg-primary/10 text-primary text-[10px]">{(agent.full_name || "A").slice(0, 2).toUpperCase()}</AvatarFallback>
+                            <AvatarFallback className="bg-primary/10 text-primary text-[10px]">{(agent.nickname || agent.full_name || "A").slice(0, 2).toUpperCase()}</AvatarFallback>
                           </Avatar>
                           {isOnline && <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-[hsl(var(--success))] border-2 border-background rounded-full" />}
                         </div>
                         <div className="text-left">
-                          <p className="text-xs font-medium">{agent.full_name || "Agent"}</p>
+                          <p className="text-xs font-medium">{agent.nickname ? `@${agent.nickname}` : (agent.full_name || "Agent")}</p>
                           <div className="flex items-center gap-1">
                             {agent.reviewCount > 0 ? (
                               <>
@@ -637,7 +659,7 @@ const StudentDashboard = () => {
                       <div className="relative">
                         <Avatar className="h-8 w-8 shrink-0 hidden sm:flex">
                           <AvatarImage src={agentProfile.avatar_url || undefined} />
-                          <AvatarFallback className="bg-primary/10 text-primary text-[10px]">{(agentProfile.full_name || "A").slice(0, 2).toUpperCase()}</AvatarFallback>
+                          <AvatarFallback className="bg-primary/10 text-primary text-[10px]">{(agentProfile.nickname || agentProfile.full_name || "A").slice(0, 2).toUpperCase()}</AvatarFallback>
                         </Avatar>
                         {agentProfile.lastActiveAt && (Date.now() - new Date(agentProfile.lastActiveAt).getTime()) < 300_000 && (
                           <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-[hsl(var(--success))] border-2 border-background rounded-full hidden sm:block" />

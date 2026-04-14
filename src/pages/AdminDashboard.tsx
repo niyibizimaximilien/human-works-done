@@ -7,12 +7,13 @@ import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Textarea } from "@/components/ui/textarea";
 import { formatRWF } from "@/lib/contactFilter";
 import {
   Users, FileText, TrendingUp, Trash2, UserCheck,
   Search, Eye, Clock, CheckCircle,
   ScrollText, CreditCard, Download, Send, Unlock,
-  ArrowRightLeft, Copy, FileDown
+  ArrowRightLeft, Copy, FileDown, AlertTriangle
 } from "lucide-react";
 import ConfirmDialog from "@/components/ui/alert-dialog-confirm";
 import TransferDialog from "@/components/TransferDialog";
@@ -30,7 +31,8 @@ const AdminDashboard = () => {
   const [assignments, setAssignments] = useState<any[]>([]);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [agentRequests, setAgentRequests] = useState<any[]>([]);
-  const [tab, setTab] = useState<"overview" | "users" | "assignments" | "audit" | "requests" | "payments">("overview");
+  const [disputes, setDisputes] = useState<any[]>([]);
+  const [tab, setTab] = useState<"overview" | "users" | "assignments" | "audit" | "requests" | "payments" | "disputes">("overview");
   const [searchQuery, setSearchQuery] = useState("");
   const [profiles, setProfiles] = useState<Record<string, any>>({});
   const [fetching, setFetching] = useState(true);
@@ -63,17 +65,19 @@ const AdminDashboard = () => {
   };
 
   const fetchAll = async () => {
-    const [{ data: profs }, { data: rls }, { data: asns }, { data: logs }] = await Promise.all([
+    const [{ data: profs }, { data: rls }, { data: asns }, { data: logs }, { data: disps }] = await Promise.all([
       supabase.from("profiles").select("*").order("created_at", { ascending: false }),
       supabase.from("user_roles").select("*"),
       supabase.from("assignments").select("*").order("created_at", { ascending: false }),
       supabase.from("audit_logs").select("*").order("created_at", { ascending: false }).limit(200),
+      supabase.from("disputes").select("*").order("created_at", { ascending: false }),
     ]);
     setUsers(profs || []);
     setRoles(rls || []);
     setAssignments(asns || []);
     setAuditLogs(logs || []);
     setAgentRequests((logs || []).filter(l => l.action === "agent_request"));
+    setDisputes(disps || []);
     const map: Record<string, any> = {};
     (profs || []).forEach(p => { map[p.user_id] = p; });
     setProfiles(map);
@@ -182,10 +186,13 @@ const AdminDashboard = () => {
     { label: "Revenue", value: formatRWF(totalRevenue), icon: TrendingUp, color: "text-[hsl(var(--success))]", bg: "bg-[hsl(var(--success))]/10" },
   ];
 
+  const openDisputes = disputes.filter(d => d.status === "open" || d.status === "under_review");
+
   const tabs = [
     { key: "overview", label: "Overview", icon: TrendingUp },
     { key: "users", label: "Users", icon: Users },
     { key: "assignments", label: "Assignments", icon: FileText },
+    { key: "disputes", label: `Disputes (${openDisputes.length})`, icon: AlertTriangle },
     { key: "requests", label: `Requests (${agentRequests.length})`, icon: UserCheck },
     { key: "payments", label: `Payments (${pendingPayment.length})`, icon: CreditCard },
     { key: "audit", label: "Audit", icon: ScrollText },
@@ -360,8 +367,8 @@ const AdminDashboard = () => {
                             <AvatarFallback className="bg-primary/10 text-primary text-[10px]">{(u.full_name || "U").slice(0, 2).toUpperCase()}</AvatarFallback>
                           </Avatar>
                           <div>
-                            <span className="font-medium">{u.full_name || "—"}</span>
-                            <p className="text-xs text-muted-foreground">{u.university || "—"}</p>
+                            <span className="font-medium">{u.nickname ? `@${u.nickname}` : (u.full_name || "—")}</span>
+                            <p className="text-xs text-muted-foreground">{u.full_name || "—"} · {u.university || "—"}</p>
                           </div>
                         </div>
                       </td>
@@ -562,7 +569,93 @@ const AdminDashboard = () => {
         </Card>
       )}
 
-      {/* Audit */}
+      {/* Disputes */}
+      {tab === "disputes" && (
+        <Card className="border-border" style={{ boxShadow: "var(--card-shadow)" }}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 font-heading">
+              <AlertTriangle className="h-5 w-5 text-destructive" /> Dispute Resolution
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {disputes.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">No disputes.</p>
+            ) : (
+              <div className="space-y-4">
+                {disputes.map(d => {
+                  const assignment = assignments.find(a => a.id === d.assignment_id);
+                  const opener = profiles[d.opened_by];
+                  return (
+                    <div key={d.id} className="border border-border rounded-lg p-4 space-y-3">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="text-sm font-medium">{assignment?.title || "Unknown Assignment"}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Opened by: {opener?.nickname ? `@${opener.nickname}` : (opener?.full_name || "Unknown")} · {relativeTime(d.created_at)}
+                          </p>
+                        </div>
+                        <Badge variant={d.status === "open" ? "destructive" : d.status === "under_review" ? "secondary" : "outline"} className="text-[10px] capitalize">
+                          {d.status.replace(/_/g, " ")}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground bg-muted/50 p-2 rounded">{d.reason}</p>
+                      {d.evidence_url && (
+                        <a href={d.evidence_url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline">View Evidence ↗</a>
+                      )}
+                      {(d.status === "open" || d.status === "under_review") && (
+                        <div className="flex gap-2 flex-wrap">
+                          <ConfirmDialog
+                            trigger={<Button size="sm" className="gold-glow tap-highlight">Release Full Payment</Button>}
+                            title="Release full payment to agent?"
+                            description="This resolves the dispute in favor of the agent. Full payment will be released."
+                            onConfirm={async () => {
+                              await supabase.from("disputes").update({ status: "resolved_full", resolved_at: new Date().toISOString() }).eq("id", d.id);
+                              await supabase.from("assignments").update({ escrow_status: "released" }).eq("id", d.assignment_id);
+                              if (assignment) {
+                                await supabase.from("assignments").update({ admin_released: true, status: "completed", reviewed_at: new Date().toISOString() }).eq("id", d.assignment_id);
+                              }
+                              toast({ title: "Dispute resolved — full payment released" });
+                              fetchAll();
+                            }}
+                            confirmText="Release"
+                          />
+                          <ConfirmDialog
+                            trigger={<Button size="sm" variant="outline">Refund Student</Button>}
+                            title="Refund student?"
+                            description="This resolves the dispute in favor of the student. Agent will not be paid."
+                            onConfirm={async () => {
+                              await supabase.from("disputes").update({ status: "rejected", resolved_at: new Date().toISOString() }).eq("id", d.id);
+                              await supabase.from("assignments").update({ escrow_status: "refunded", payment_status: "none" }).eq("id", d.assignment_id);
+                              if (assignment?.student_id) {
+                                await supabase.from("notifications").insert({ user_id: assignment.student_id, title: "Dispute Resolved ✅", message: "Your dispute has been resolved. A refund will be processed.", link: "/dashboard" });
+                              }
+                              toast({ title: "Dispute resolved — student refunded" });
+                              fetchAll();
+                            }}
+                            confirmText="Refund"
+                            variant="destructive"
+                          />
+                          {d.status === "open" && (
+                            <Button size="sm" variant="outline" onClick={async () => {
+                              await supabase.from("disputes").update({ status: "under_review" }).eq("id", d.id);
+                              toast({ title: "Marked as under review" });
+                              fetchAll();
+                            }}>Mark Under Review</Button>
+                          )}
+                        </div>
+                      )}
+                      {d.admin_notes && (
+                        <p className="text-xs text-muted-foreground">Admin notes: {d.admin_notes}</p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {tab === "audit" && (
         <Card className="border-border" style={{ boxShadow: "var(--card-shadow)" }}>
           <CardHeader><CardTitle className="flex items-center gap-2 font-heading"><ScrollText className="h-5 w-5 text-primary" /> Audit Log</CardTitle></CardHeader>

@@ -16,34 +16,46 @@ export type Database = {
     Tables: {
       agent_reviews: {
         Row: {
+          accuracy_rating: number | null
           agent_id: string
           assignment_id: string
           comment: string | null
+          communication_rating: number | null
           created_at: string
           id: string
           on_time: boolean
+          quality_rating: number | null
           rating: number
           student_id: string
+          timeliness_rating: number | null
         }
         Insert: {
+          accuracy_rating?: number | null
           agent_id: string
           assignment_id: string
           comment?: string | null
+          communication_rating?: number | null
           created_at?: string
           id?: string
           on_time?: boolean
+          quality_rating?: number | null
           rating: number
           student_id: string
+          timeliness_rating?: number | null
         }
         Update: {
+          accuracy_rating?: number | null
           agent_id?: string
           assignment_id?: string
           comment?: string | null
+          communication_rating?: number | null
           created_at?: string
           id?: string
           on_time?: boolean
+          quality_rating?: number | null
           rating?: number
           student_id?: string
+          timeliness_rating?: number | null
         }
         Relationships: [
           {
@@ -64,13 +76,18 @@ export type Database = {
           deadline: string
           deliverable_url: string | null
           description: string | null
+          escrow_status: string
           file_url: string | null
           human_verified: boolean | null
           id: string
+          material_cost: number | null
           payment_proof_url: string | null
           payment_status: string
+          platform_fee: number | null
           priority_fee: number | null
+          rejection_reason: string | null
           reviewed_at: string | null
+          service_fee: number | null
           sla_tier: string
           status: string
           student_id: string
@@ -89,13 +106,18 @@ export type Database = {
           deadline: string
           deliverable_url?: string | null
           description?: string | null
+          escrow_status?: string
           file_url?: string | null
           human_verified?: boolean | null
           id?: string
+          material_cost?: number | null
           payment_proof_url?: string | null
           payment_status?: string
+          platform_fee?: number | null
           priority_fee?: number | null
+          rejection_reason?: string | null
           reviewed_at?: string | null
+          service_fee?: number | null
           sla_tier?: string
           status?: string
           student_id: string
@@ -114,13 +136,18 @@ export type Database = {
           deadline?: string
           deliverable_url?: string | null
           description?: string | null
+          escrow_status?: string
           file_url?: string | null
           human_verified?: boolean | null
           id?: string
+          material_cost?: number | null
           payment_proof_url?: string | null
           payment_status?: string
+          platform_fee?: number | null
           priority_fee?: number | null
+          rejection_reason?: string | null
           reviewed_at?: string | null
+          service_fee?: number | null
           sla_tier?: string
           status?: string
           student_id?: string
@@ -162,6 +189,56 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      disputes: {
+        Row: {
+          admin_notes: string | null
+          assignment_id: string
+          created_at: string
+          evidence_url: string | null
+          id: string
+          opened_by: string
+          reason: string
+          resolution_amount: number | null
+          resolved_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          assignment_id: string
+          created_at?: string
+          evidence_url?: string | null
+          id?: string
+          opened_by: string
+          reason: string
+          resolution_amount?: number | null
+          resolved_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          admin_notes?: string | null
+          assignment_id?: string
+          created_at?: string
+          evidence_url?: string | null
+          id?: string
+          opened_by?: string
+          reason?: string
+          resolution_amount?: number | null
+          resolved_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "disputes_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       messages: {
         Row: {
@@ -234,6 +311,8 @@ export type Database = {
           id: string
           last_active_at: string | null
           level: string | null
+          nickname: string | null
+          nickname_changed_at: string | null
           onboarding_completed: boolean
           phone: string | null
           student_id_number: string | null
@@ -249,6 +328,8 @@ export type Database = {
           id?: string
           last_active_at?: string | null
           level?: string | null
+          nickname?: string | null
+          nickname_changed_at?: string | null
           onboarding_completed?: boolean
           phone?: string | null
           student_id_number?: string | null
@@ -264,6 +345,8 @@ export type Database = {
           id?: string
           last_active_at?: string | null
           level?: string | null
+          nickname?: string | null
+          nickname_changed_at?: string | null
           onboarding_completed?: boolean
           phone?: string | null
           student_id_number?: string | null
