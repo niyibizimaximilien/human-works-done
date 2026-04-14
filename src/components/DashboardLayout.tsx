@@ -40,7 +40,8 @@ function SidebarNav() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const navItems = role === "admin" ? adminNav : role === "agent" ? agentNav : studentNav;
-  const initials = (profile?.full_name || user?.email || "U")
+  const displayName = profile?.nickname ? `@${profile.nickname}` : (profile?.full_name || "User");
+  const initials = (profile?.nickname || profile?.full_name || user?.email || "U")
     .split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase();
 
   return (
@@ -83,7 +84,7 @@ function SidebarNav() {
               <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">{initials}</AvatarFallback>
             </Avatar>
             <div className="min-w-0">
-              <p className="text-xs font-medium truncate">{profile?.full_name || "User"}</p>
+              <p className="text-xs font-medium truncate">{displayName}</p>
               <p className="text-[10px] text-muted-foreground truncate">{user?.email}</p>
             </div>
           </div>
