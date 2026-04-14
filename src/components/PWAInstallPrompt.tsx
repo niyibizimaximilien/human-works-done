@@ -101,7 +101,7 @@ export function PWAInstallSection() {
   };
 
   return (
-    <div className="rounded-2xl border border-border bg-gradient-to-br from-primary/5 via-transparent to-accent/5 p-5 space-y-4">
+    <div className="rounded-2xl border border-border bg-card p-5 space-y-4">
       <div className="flex items-start gap-4">
         <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
           <Smartphone className="h-6 w-6 text-primary" />
