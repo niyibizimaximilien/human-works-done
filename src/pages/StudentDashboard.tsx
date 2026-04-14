@@ -573,7 +573,7 @@ const StudentDashboard = () => {
                     {agents.map((agent) => (
                       <SelectItem key={agent.user_id} value={agent.user_id}>
                         <div className="flex items-center gap-2">
-                          <span>{agent.full_name || "Agent"}</span>
+                          <span>{agent.nickname ? `@${agent.nickname}` : (agent.full_name || "Agent")}</span>
                           {agent.reviewCount > 0 && <span className="text-[10px] text-muted-foreground">⭐ {agent.avgRating} ({agent.reviewCount})</span>}
                         </div>
                       </SelectItem>
@@ -597,12 +597,12 @@ const StudentDashboard = () => {
                         <div className="relative">
                           <Avatar className="h-8 w-8">
                             <AvatarImage src={agent.avatar_url || undefined} />
-                            <AvatarFallback className="bg-primary/10 text-primary text-[10px]">{(agent.full_name || "A").slice(0, 2).toUpperCase()}</AvatarFallback>
+                            <AvatarFallback className="bg-primary/10 text-primary text-[10px]">{(agent.nickname || agent.full_name || "A").slice(0, 2).toUpperCase()}</AvatarFallback>
                           </Avatar>
                           {isOnline && <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-[hsl(var(--success))] border-2 border-background rounded-full" />}
                         </div>
                         <div className="text-left">
-                          <p className="text-xs font-medium">{agent.full_name || "Agent"}</p>
+                          <p className="text-xs font-medium">{agent.nickname ? `@${agent.nickname}` : (agent.full_name || "Agent")}</p>
                           <div className="flex items-center gap-1">
                             {agent.reviewCount > 0 ? (
                               <>
@@ -658,7 +658,7 @@ const StudentDashboard = () => {
                       <div className="relative">
                         <Avatar className="h-8 w-8 shrink-0 hidden sm:flex">
                           <AvatarImage src={agentProfile.avatar_url || undefined} />
-                          <AvatarFallback className="bg-primary/10 text-primary text-[10px]">{(agentProfile.full_name || "A").slice(0, 2).toUpperCase()}</AvatarFallback>
+                          <AvatarFallback className="bg-primary/10 text-primary text-[10px]">{(agentProfile.nickname || agentProfile.full_name || "A").slice(0, 2).toUpperCase()}</AvatarFallback>
                         </Avatar>
                         {agentProfile.lastActiveAt && (Date.now() - new Date(agentProfile.lastActiveAt).getTime()) < 300_000 && (
                           <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-[hsl(var(--success))] border-2 border-background rounded-full hidden sm:block" />
